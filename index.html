@@ -1,61 +1,1560 @@
-// ============================================================
-// AI ANALYZE ENDPOINT — Add this to your existing server.js
-// Paste this ABOVE the "app.listen(PORT, ...)" line
-// ============================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>VitalCommand IQ</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VitalCommand IQ">
+<meta name="theme-color" content="#0b1120">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<style>
+  html, body, #root { margin:0; padding:0; min-height:100dvh; background:#0b1120; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
 
-// ---- AI Analyze (POST /ai/analyze) ----
-// VitalCommand sends images + text → proxy forwards to Anthropic → returns response
-app.post("/ai/analyze", async (req, res) => {
-  try {
-    const { messages, system } = req.body;
+const { useState, useEffect, useRef, useCallback } = React;
 
-    if (!ANTHROPIC_API_KEY) {
-      return res.status(500).json({ error: "Anthropic API key not configured" });
-    }
 
-    console.log("[ai/analyze] Forwarding to Anthropic...");
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1500,
-        system: system || "",
-        messages: messages || [],
-      }),
-    });
+/*
+═══════════════════════════════════════════════════════════════════
+VITALCOMMAND IQ v2 — Mobile-Optimized Health Intelligence
+Fixes: larger cards, multi-photo upload, AI auto-save, faster entry
+═══════════════════════════════════════════════════════════════════
+*/
 
-    const data = await response.json();
-    console.log(`[ai/analyze] Response status: ${response.status}, content blocks: ${data.content?.length || 0}`);
+// ── Food Database ──
+const FOODS = {
+"Protein": [
+{ n: "Fairlife Elite 42g", c: 230, p: 42, cb: 6, f: 5, i: "🥛" },
+{ n: "Barebells Bar", c: 210, p: 20, cb: 18, f: 8, i: "💪" },
+{ n: "Momentum + Fairlife (2 scoops)", c: 380, p: 58, cb: 14, f: 6, i: "🥤" },
+],
+"Breakfast": [
+{ n: "2 Scrambled Eggs", c: 180, p: 12, cb: 2, f: 14, i: "🥚" },
+{ n: "2 Over Medium Eggs", c: 180, p: 12, cb: 2, f: 14, i: "🍳" },
+{ n: "Grits", c: 180, p: 4, cb: 38, f: 1, i: "🥣" },
+{ n: "Biscuit", c: 280, p: 5, cb: 34, f: 14, i: "🧈" },
+{ n: "Bacon (3 strips)", c: 130, p: 10, cb: 0, f: 10, i: "🥓" },
+{ n: "Sausage (2 links)", c: 200, p: 12, cb: 2, f: 16, i: "🌭" },
+{ n: "Oatmeal (plain)", c: 150, p: 5, cb: 27, f: 3, i: "🥣" },
+{ n: "Parfait", c: 280, p: 8, cb: 48, f: 6, i: "🍨" },
+],
+"Chick-fil-A": [
+{ n: "Grilled Chicken Sandwich", c: 390, p: 28, cb: 44, f: 12, i: "🐔" },
+{ n: "Chicken Biscuit", c: 440, p: 18, cb: 48, f: 20, i: "🧈" },
+{ n: "Regular Chicken Sandwich", c: 440, p: 28, cb: 40, f: 19, i: "🐔" },
+{ n: "Fruit Cup", c: 50, p: 1, cb: 13, f: 0, i: "🍇" },
+{ n: "Side Salad (Ranch)", c: 310, p: 18, cb: 14, f: 22, i: "🥗" },
+{ n: "Kale Crunch Salad", c: 120, p: 3, cb: 14, f: 6, i: "🥬" },
+],
+"Newk's": [
+{ n: "Pepperoni Pizza (Cauliflower)", c: 680, p: 28, cb: 52, f: 40, i: "🍕" },
+{ n: "Newk's Club w/ Chips", c: 850, p: 38, cb: 72, f: 48, i: "🥪" },
+{ n: "Chicken Tortilla Soup", c: 320, p: 22, cb: 28, f: 14, i: "🍲" },
+{ n: "Chicken Salad Sandwich", c: 620, p: 32, cb: 48, f: 34, i: "🥪" },
+{ n: "Turkey Avocado Sandwich", c: 580, p: 34, cb: 44, f: 30, i: "🥑" },
+{ n: "Strawberry Cake", c: 480, p: 6, cb: 64, f: 22, i: "🍰" },
+],
+"Two Rivers": [
+{ n: "Ribeye Steak", c: 780, p: 62, cb: 0, f: 58, i: "🥩" },
+{ n: "Filet Steak", c: 480, p: 52, cb: 0, f: 28, i: "🥩" },
+{ n: "Chicken Cordon Bleu", c: 620, p: 44, cb: 22, f: 38, i: "🍗" },
+{ n: "Side Salad (Comeback)", c: 180, p: 4, cb: 12, f: 14, i: "🥗" },
+],
+"Primo's Cafe": [
+{ n: "Shrimp Po'Boy", c: 720, p: 28, cb: 68, f: 36, i: "🍤" },
+],
+"Mexican": [
+{ n: "Chicken Fajitas (Corn)", c: 520, p: 38, cb: 44, f: 20, i: "🌮" },
+{ n: "Guacamole", c: 120, p: 2, cb: 8, f: 10, i: "🥑" },
+{ n: "Cheese Dip", c: 180, p: 8, cb: 6, f: 14, i: "🧀" },
+{ n: "Salsa & Chips", c: 280, p: 4, cb: 38, f: 14, i: "🫙" },
+],
+"Fish": [
+{ n: "Grilled Salmon", c: 420, p: 44, cb: 0, f: 26, i: "🐟" },
+{ n: "Grilled Flounder", c: 280, p: 42, cb: 0, f: 12, i: "🐟" },
+{ n: "Grilled Grouper", c: 320, p: 46, cb: 0, f: 14, i: "🐟" },
+],
+"Schlotzsky's": [
+{ n: "Smoked Turkey (Small)", c: 480, p: 32, cb: 52, f: 16, i: "🦃" },
+{ n: "Smoked Turkey (Med)", c: 680, p: 44, cb: 72, f: 22, i: "🦃" },
+],
+"Smoothie King": [
+{ n: "Low Carb Smoothie", c: 280, p: 20, cb: 18, f: 12, i: "🥤" },
+{ n: "Banana Strawberry Blueberry", c: 380, p: 8, cb: 82, f: 2, i: "🍌" },
+],
+"Pizza": [
+{ n: "Pizza Shack — Pepperoni", c: 320, p: 14, cb: 36, f: 14, i: "🍕" },
+{ n: "Sal & Mookie's — Pepperoni", c: 340, p: 16, cb: 38, f: 14, i: "🍕" },
+],
+"Homemade": [
+{ n: "Fresh Milled Bread (slice)", c: 321, p: 16, cb: 54, f: 5, i: "🌾", unit: "slice", perUnit: true },
+{ n: "Air Fryer Chicken Strips", c: 80, p: 11, cb: 1, f: 4, i: "🍗", unit: "strip", perUnit: true },
+{ n: "Grilled Chicken Strips", c: 70, p: 12, cb: 0, f: 2, i: "🍗", unit: "strip", perUnit: true },
+{ n: "Steamed Broccoli", c: 55, p: 4, cb: 11, f: 0, i: "🥦" },
+{ n: "Blueberries (cup)", c: 85, p: 1, cb: 21, f: 0, i: "🫐" },
+{ n: "Strawberries (cup)", c: 50, p: 1, cb: 12, f: 0, i: "🍓" },
+{ n: "Orange", c: 65, p: 1, cb: 16, f: 0, i: "🍊" },
+{ n: "Banana", c: 105, p: 1, cb: 27, f: 0, i: "🍌" },
+{ n: "Almonds (1oz)", c: 160, p: 6, cb: 6, f: 14, i: "🥜" },
+{ n: "Keto Bread (slice)", c: 40, p: 4, cb: 5, f: 1, i: "🍞", unit: "slice", perUnit: true },
+{ n: "Sara Lee Delights (slice)", c: 45, p: 2, cb: 9, f: 0.5, i: "🍞", unit: "slice", perUnit: true },
+{ n: "90/10 Ground Beef (4oz)", c: 200, p: 23, cb: 0, f: 11, i: "🥩" },
+{ n: "Burger Patty w/ Delights Bun", c: 290, p: 27, cb: 18, f: 12, i: "🍔" },
+{ n: "Tuna Pouch (StarKist)", c: 70, p: 17, cb: 0, f: 0.5, i: "🐟", unit: "pouch", perUnit: true },
+{ n: "Tuna Sandwich (Delights)", c: 250, p: 23, cb: 18, f: 12, i: "🥪" },
+{ n: "Fairlife Fat Free (cup)", c: 80, p: 13, cb: 6, f: 0, i: "🥛", unit: "cup", perUnit: true },
+{ n: "Blue Plate Mayo (tbsp)", c: 100, p: 0, cb: 0, f: 11, i: "🫙", unit: "tbsp", perUnit: true },
+{ n: "Grape Spread (tbsp)", c: 40, p: 0, cb: 9, f: 0, i: "🍇", unit: "tbsp", perUnit: true },
+{ n: "Oatmeal Maple Brown Sugar", c: 150, p: 3, cb: 31, f: 2, i: "🥣", unit: "packet", perUnit: true },
+{ n: "Oatmeal Apple Cinnamon", c: 150, p: 3, cb: 31, f: 1.5, i: "🥣", unit: "packet", perUnit: true },
+{ n: "Oatmeal Original", c: 150, p: 5, cb: 27, f: 2.5, i: "🥣", unit: "packet", perUnit: true },
+{ n: "PB&J on Delights", c: 380, p: 11, cb: 50, f: 17, i: "🥪" },
+],
+"Treats": [
+{ n: "Crumbl Choc Chip Cookie", c: 580, p: 6, cb: 72, f: 30, i: "🍪" },
+{ n: "Butterfinger", c: 275, p: 4, cb: 44, f: 12, i: "🍫" },
+{ n: "M&M's Peanut", c: 250, p: 5, cb: 30, f: 13, i: "🍬" },
+{ n: "M&M's Regular", c: 240, p: 2, cb: 34, f: 10, i: "🍬" },
+],
+"Ice Cream": [
+{ n: "BB Banana Pudding", c: 320, p: 5, cb: 42, f: 16, i: "🍦" },
+{ n: "BB Blackberry Cobbler", c: 300, p: 4, cb: 40, f: 14, i: "🍦" },
+{ n: "BB Chocolate", c: 320, p: 5, cb: 38, f: 18, i: "🍦" },
+],
+"Drinks": [
+{ n: "Diet Coke", c: 0, p: 0, cb: 0, f: 0, i: "🥤" },
+{ n: "Black Coffee", c: 5, p: 0, cb: 0, f: 0, i: "☕" },
+{ n: "Water (16oz)", c: 0, p: 0, cb: 0, f: 0, i: "💧" },
+{ n: "Unsweet Tea", c: 0, p: 0, cb: 0, f: 0, i: "🍵" },
+],
+};
 
-    return res.json(data);
-  } catch (err) {
-    console.error("[ai/analyze] Error:", err.message);
-    return res.status(500).json({ error: err.message });
-  }
+// ── Workouts ──
+const WORKOUTS = {
+"\ud83d\udd14 Kettlebell": [
+{ n: "Swings (2-Hand)", cpm: 8, type: "strength" },
+{ n: "Side Swings", cpm: 7, type: "strength" },
+{ n: "Halos (Head)", cpm: 4, type: "strength" },
+{ n: "Halos (Waist)", cpm: 4, type: "strength" },
+{ n: "Goblet Squats", cpm: 6, type: "strength" },
+{ n: "KB Complex / Circuit", cpm: 11, type: "strength" },
+],
+"\ud83c\udfcb\ufe0f Barbell / Rack": [
+{ n: "Squats", cpm: 6, type: "strength" },
+{ n: "Bench Press", cpm: 5, type: "strength" },
+{ n: "Good Mornings", cpm: 4, type: "strength" },
+],
+"\ud83d\udcaa Dumbbell": [
+{ n: "DB Bench Press", cpm: 5, type: "strength" },
+{ n: "Floor Press", cpm: 5, type: "strength" },
+{ n: "Curls", cpm: 4, type: "strength" },
+{ n: "Shoulder Press", cpm: 5, type: "strength" },
+{ n: "Rows", cpm: 5, type: "strength" },
+{ n: "RDLs", cpm: 5, type: "strength" },
+{ n: "Bulgarian Splits", cpm: 6, type: "strength" },
+{ n: "Step-ups", cpm: 5, type: "strength" },
+],
+"\ud83c\udfaf Accessory": [
+{ n: "Face Pulls (Bands)", cpm: 4, type: "strength" },
+{ n: "Farmer Carries", cpm: 7, type: "strength" },
+{ n: "Lat Pulldowns", cpm: 5, type: "strength" },
+{ n: "Planks (Front)", cpm: 3, type: "strength" },
+{ n: "Planks (Side)", cpm: 3, type: "strength" },
+],
+"\ud83d\udeb4 Cardio": [
+{ n: "Elliptical", cpm: 9, type: "cardio" },
+{ n: "Assault Bike", cpm: 14, type: "cardio" },
+{ n: "Rowing Machine", cpm: 10, type: "cardio" },
+{ n: "Zone 2 Walk", cpm: 5, type: "cardio" },
+],
+"\ud83e\udd4a Conditioning": [
+{ n: "Heavy Bag Work", cpm: 12, type: "cardio" },
+],
+"\ud83e\uddd6 Recovery": [
+{ n: "Infrared Sauna", cpm: 2, type: "recovery" },
+{ n: "Cold Plunge (51\u00b0F)", cpm: 3, type: "recovery" },
+{ n: "Stretching", cpm: 2, type: "recovery" },
+],
+};
+
+
+// -- Daily Verse Rotation: Goodness of God --
+const VERSES = [
+{ref:"Exodus 33:19",t:"I will make all My goodness pass before you...",d:"Today I expect to see the goodness of God."},
+{ref:"Exodus 34:6",t:"The Lord, merciful and gracious, slow to anger, abounding in steadfast love.",d:"God is patient and generous toward me."},
+{ref:"1 Chr 16:34",t:"Give thanks to the Lord, for He is good; His steadfast love endures forever!",d:"His love for me has no expiration date."},
+{ref:"Psalm 23:6",t:"Surely goodness and mercy shall follow me all the days of my life...",d:"Goodness and mercy are chasing me down today."},
+{ref:"Psalm 25:7",t:"According to Your steadfast love remember me, for Your goodness, O Lord!",d:"God remembers me with kindness."},
+{ref:"Psalm 27:13",t:"I shall look upon the goodness of the Lord in the land of the living!",d:"I will see His goodness -- not someday, but today."},
+{ref:"Psalm 31:19",t:"How abundant is Your goodness, stored up for those who fear You...",d:"God has stored up goodness specifically for me."},
+{ref:"Psalm 34:8",t:"Taste and see that the Lord is good! Blessed is the man who takes refuge in Him!",d:"I take refuge in a God who is genuinely good."},
+{ref:"Psalm 65:11",t:"You crown the year with Your goodness, and Your paths drip with abundance.",d:"This year is crowned with His goodness."},
+{ref:"Psalm 86:5",t:"For You, O Lord, are good and forgiving, abounding in steadfast love...",d:"He is good AND forgiving. I receive both today."},
+{ref:"Psalm 100:5",t:"For the Lord is good; His steadfast love endures forever.",d:"His goodness endures forever."},
+{ref:"Psalm 103:8",t:"The Lord is merciful and gracious, slow to anger and abounding in steadfast love.",d:"God is slow to anger and rich in love toward me."},
+{ref:"Psalm 106:1",t:"Give thanks to the Lord, for He is good, His steadfast love endures forever!",d:"I start today with thanks -- He is good."},
+{ref:"Psalm 107:8-9",t:"He satisfies the longing soul, and fills the hungry soul with goodness.",d:"My hunger -- physical and spiritual -- He satisfies."},
+{ref:"Psalm 119:68",t:"You are good and do good...",d:"God is good in nature and good in action."},
+{ref:"Psalm 135:3",t:"Praise the Lord, for the Lord is good...",d:"Praise is my first response because He is good."},
+{ref:"Psalm 136:1",t:"Give thanks to the Lord, for He is good...",d:"Gratitude flows because of who He is."},
+{ref:"Psalm 145:9",t:"The Lord is good to all, and His mercy is over all that He has made.",d:"His mercy covers everything -- including me."},
+{ref:"Jer 31:14",t:"My people shall be satisfied with My goodness, declares the Lord.",d:"His promise: I will be satisfied with His goodness."},
+{ref:"Lam 3:25",t:"The Lord is good to those who wait for Him...",d:"Even in waiting, His goodness is at work."},
+{ref:"Nahum 1:7",t:"The Lord is good, a stronghold in the day of trouble...",d:"In hard moments, He is my stronghold."},
+{ref:"Matt 7:11",t:"How much more will your Father give good things to those who ask Him!",d:"My Father gives good things. I ask boldly."},
+{ref:"Mark 10:18",t:"No one is good except God alone.",d:"God alone defines goodness. I trust His standard."},
+{ref:"Acts 10:38",t:"He went about doing good and healing all who were oppressed...",d:"Jesus did good everywhere He went. He still does."},
+{ref:"Acts 14:17",t:"He did good by giving you rains from heaven and fruitful seasons...",d:"Every good season is evidence of His hand."},
+{ref:"Rom 2:4",t:"The riches of His kindness... meant to lead you to repentance.",d:"His kindness is not weakness -- it transforms me."},
+{ref:"James 1:17",t:"Every good gift and every perfect gift is from above...",d:"Every good thing in my life traces back to Him."},
+{ref:"1 Peter 2:3",t:"If indeed you have tasted that the Lord is good.",d:"I have tasted it. He is good. Period."},
+];
+const todayVerse = VERSES[Math.floor((new Date().getFullYear() * 366 + Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0).getTime()) / 86400000)) % VERSES.length)];
+
+const S = {
+bg: "#0b1120", card: "#131c2e", border: "#1c2a42", accent: "#00d4aa",
+green: "#00d4aa", cyan: "#06b6d4", orange: "#f59e0b", red: "#ef4444",
+purple: "#a855f7", pink: "#ec4899", blue: "#3b82f6",
+t1: "#f0f4f8", t2: "#8899aa", t3: "#4a5e73",
+};
+
+const Ring = ({ val, max, color, label, size = 80 }) => {
+const pct = Math.min((val / max) * 100, 100);
+const r = (size - 10) / 2, C = 2 * Math.PI * r, off = C - (pct / 100) * C;
+return (
+<div style={{ textAlign: "center", flex: "1 1 0" }}>
+<div style={{ position: "relative", width: size, height: size, margin: "0 auto" }}>
+<svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+<circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="7" />
+<circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="7"
+strokeDasharray={C} strokeDashoffset={off} strokeLinecap="round"
+style={{ transition: "stroke-dashoffset 0.5s ease" }} />
+</svg>
+<div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 800, color }}>{val}</div>
+</div>
+</div>
+<div style={{ fontSize: 11, color: S.t2, fontWeight: 700, marginTop: 4, letterSpacing: 0.5 }}>{label}</div>
+</div>
+);
+};
+
+function App() {
+const [tab, setTab] = useState("home");
+const [toast, setToast] = useState(null);
+const [modal, setModal] = useState(null);
+
+// ── Data State ──
+const [foods, setFoods] = useState([]);
+const [workouts, setWkts] = useState([]);
+const [bp, setBp] = useState([]);
+const [bpPer, setBpPer] = useState("morning");
+const [bpS, setBpS] = useState(""); const [bpD, setBpD] = useState(""); const [bpP, setBpP] = useState("");
+const [wt, setWt] = useState("213.8"); const [bf, setBf] = useState("39.4");
+const [mm, setMm] = useState("165.8"); const [vf, setVf] = useState("8");
+const [rec, setRec] = useState("75"); const [hrv, setHrv] = useState("25");
+const [slp, setSlp] = useState(""); const [strain, setStrain] = useState("");
+const [ahi, setAhi] = useState(""); const [cpH, setCpH] = useState(""); const [cpM, setCpM] = useState("");
+const [weather, setWeather] = useState(null);
+const [openCat, setOpenCat] = useState(null);
+const [planOpen, setPlanOpen] = useState(false);
+const [foodQty, setFoodQty] = useState({});
+const [woMins, setWoMins] = useState({});
+const [woSets, setWoSets] = useState({}); // { "Bench Press": [{reps:10,wt:185},{reps:8,wt:195}] }
+const [woCurrentReps, setWoCurrentReps] = useState({});
+const [woCurrentWt, setWoCurrentWt] = useState({});
+const [wktSummary, setWktSummary] = useState(null);
+const [wktSummaryLoading, setWktSummaryLoading] = useState(false);
+
+// AI state
+const [aiUploads, setAiUploads] = useState([]);
+const [aiText, setAiText] = useState("");
+const [aiResp, setAiResp] = useState("");
+const [aiLoading, setAiLoading] = useState(false);
+const [whoopStatus, setWhoopStatus] = useState("saved");
+const [withingsStatus, setWithingsStatus] = useState("saved");
+const [aiExtracted, setAiExtracted] = useState(null); // Review & Save panel
+const [storageReady, setStorageReady] = useState(false);
+const fileRef = useRef(null);
+
+const show = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2200); }, []);
+
+// Macro totals
+const tCal = foods.reduce((s, f) => s + f.c, 0);
+const tPro = foods.reduce((s, f) => s + f.p, 0);
+const tCarb = foods.reduce((s, f) => s + f.cb, 0);
+const tFat = foods.reduce((s, f) => s + f.f, 0);
+const tWoMin = workouts.reduce((s, w) => s + w.mins, 0);
+const tWoCal = workouts.reduce((s, w) => s + w.cal, 0);
+const goals = { cal: 2000, pro: 200, carb: 150, fat: 65 };
+
+// Weather
+useEffect(() => {
+if (!navigator.geolocation) return;
+navigator.geolocation.getCurrentPosition(async (pos) => {
+try {
+const { latitude: la, longitude: lo } = pos.coords;
+const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,uv_index&hourly=temperature_2m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=1&timezone=auto`);
+const d = await r.json();
+setWeather({
+temp: Math.round(d.current.temperature_2m), feels: Math.round(d.current.apparent_temperature),
+hum: d.current.relative_humidity_2m, wind: Math.round(d.current.wind_speed_10m),
+uv: d.current.uv_index, code: d.current.weather_code,
+hourly: d.hourly.time.slice(0, 12).map((t, i) => ({
+hr: new Date(t).toLocaleTimeString([], { hour: "numeric" }),
+temp: Math.round(d.hourly.temperature_2m[i]), code: d.hourly.weather_code[i],
+})),
+});
+} catch(e) { console.log(e); }
+});
+}, []);
+
+// ── Persistent Storage — Load on mount ──
+useEffect(() => {
+const loadAll = async () => {
+try {
+const r = await window.storage.get("vciq-data");
+if (r && r.value) {
+const d = JSON.parse(r.value);
+if (d.wt) setWt(d.wt); if (d.bf) setBf(d.bf);
+if (d.mm) setMm(d.mm); if (d.vf) setVf(d.vf);
+if (d.rec) setRec(d.rec); if (d.hrv) setHrv(d.hrv);
+if (d.slp) setSlp(d.slp); if (d.strain) setStrain(d.strain);
+if (d.ahi) setAhi(d.ahi); if (d.cpH) setCpH(d.cpH); if (d.cpM) setCpM(d.cpM);
+if (d.bp) setBp(d.bp);
+if (d.foods) setFoods(d.foods);
+if (d.workouts) setWkts(d.workouts);
+if (d.woSets) setWoSets(d.woSets);
+setWhoopStatus("saved"); setWithingsStatus("saved");
+}
+} catch(e) { console.log("Storage load:", e); }
+setStorageReady(true);
+};
+loadAll();
+}, []);
+
+// ── Persistent Storage — Auto-save on data change ──
+const saveTimer = useRef(null);
+useEffect(() => {
+if (!storageReady) return;
+if (saveTimer.current) clearTimeout(saveTimer.current);
+saveTimer.current = setTimeout(async () => {
+try {
+await window.storage.set("vciq-data", JSON.stringify({
+wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM,
+bp, foods, workouts, savedAt: new Date().toISOString(),
+}));
+} catch(e) { console.log("Storage save:", e); }
+}, 1500);
+return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+}, [wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM, bp, foods, workouts, storageReady]);
+
+const wIcon = (c) => c <= 1 ? "☀️" : c <= 3 ? "⛅" : c <= 48 ? "☁️" : c <= 67 ? "🌧️" : c <= 82 ? "🌦️" : "⛈️";
+
+const bpCat = (s, d) => {
+if (s < 120 && d < 80) return { l: "Normal", c: S.green };
+if (s < 130 && d < 80) return { l: "Elevated", c: S.orange };
+if (s < 140 || d < 90) return { l: "Stage 1", c: S.orange };
+return { l: "Stage 2", c: S.red };
+};
+
+const recColor = (v) => +v >= 67 ? S.green : +v >= 34 ? S.orange : S.red;
+
+const hr = new Date().getHours();
+const greet = hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : "Good evening";
+
+const aiTip = () => {
+const r = parseInt(rec) || 0;
+const now = new Date();
+const hour = now.getHours();
+const min = now.getMinutes();
+const bedtime = 22; // 10 PM target bedtime
+const hoursToSleep = bedtime - hour - (min > 30 ? 0 : 0) + (hour >= bedtime ? 24 : 0);
+const woCal = tWoCal;
+const ate = tCal;
+const pro = tPro;
+const proGoal = goals.pro;
+const calGoal = goals.cal;
+const calLeft = calGoal - ate;
+const proLeft = proGoal - pro;
+const hrvVal = parseInt(hrv) || 0;
+const strainVal = parseFloat(strain) || 0;
+
+let lines = [];
+let color = S.green;
+
+// ── MORNING (5am–11am) ──
+if (hour >= 5 && hour < 11) {
+if (r >= 67) {
+lines.push(`Recovery ${r}% — you're green. 💪 It's a Strength day.`);
+if (hrvVal >= 40) lines.push(`HRV at ${hrvVal}ms is solid — your nervous system is ready for heavy loads.`);
+else if (hrvVal > 0) lines.push(`HRV at ${hrvVal}ms is a bit low for green. Consider moderate volume, listen to your body.`);
+lines.push("Best window: Train in the next 2–3 hours while cortisol is naturally high.");
+if (ate === 0) lines.push("⚡ Get 30–40g protein within the hour before training. Fairlife Elite or eggs + toast.");
+color = S.green;
+} else if (r >= 34) {
+lines.push(`Recovery ${r}% — yellow zone. Moderate intensity today.`);
+lines.push("Good options: Zone 2 cardio, light kettlebell work, or mobility session.");
+lines.push("Skip heavy compounds. Your body is still processing yesterday.");
+color = S.orange;
+} else {
+lines.push(`Recovery ${r}% — red zone. 🔴 Prioritize rest today.`);
+lines.push("Light walk, stretching, or sauna only. No strength work.");
+lines.push("Focus on nutrition and hydration. Extra sleep tonight if possible.");
+color = S.red;
+}
+}
+
+// ── MIDDAY (11am–2pm) ──
+else if (hour >= 11 && hour < 14) {
+if (woCal > 0) {
+lines.push(`✓ ${tWoMin} min trained, ${woCal} cal burned. Solid morning.`);
+if (proLeft > 80) lines.push(`⚠️ You need ${proLeft}g more protein today — prioritize protein at lunch.`);
+else if (proLeft > 0) lines.push(`Protein tracking well — ${proLeft}g to go. Keep it up.`);
+} else {
+if (r >= 67) lines.push("Haven't trained yet — afternoon session is still effective. Don't skip it.");
+else lines.push("Rest day tracking. Light walk after lunch helps digestion and blood sugar.");
+}
+if (calLeft > 800) lines.push(`${calLeft} cal remaining — good room for a solid lunch.`);
+else if (calLeft < 200 && calLeft > 0) lines.push(`Only ${calLeft} cal left today — keep dinner light. Grilled fish + veggies.`);
+color = r >= 67 ? S.green : r >= 34 ? S.orange : S.red;
+}
+
+// ── AFTERNOON (2pm–5pm) ──
+else if (hour >= 14 && hour < 17) {
+if (woCal === 0 && r >= 50) {
+lines.push("Afternoon training window open — cortisol + body temp peak between 2–5 PM.");
+lines.push("This is actually your strongest training window physiologically.");
+} else if (woCal > 0) {
+lines.push(`Training done — ${tWoMin} min logged. Focus on recovery nutrition.`);
+if (proLeft > 60) lines.push(`⚠️ ${proLeft}g protein still needed — double down at dinner.`);
+}
+if (calLeft > 600) lines.push("Plenty of room for a quality dinner. Plan something protein-heavy.");
+lines.push("Good time for an outdoor walk if weather allows. AQI and UV are in your dashboard.");
+color = r >= 50 ? S.green : S.orange;
+}
+
+// ── EARLY EVENING (5pm–7pm) ──
+else if (hour >= 17 && hour < 19) {
+lines.push(`${hoursToSleep} hours to bedtime.`);
+if (woCal === 0 && r >= 50) {
+lines.push("If you're training now — keep it moderate. You need time to wind down before sleep.");
+lines.push("Best options: 30–40 min strength at moderate intensity, or Zone 2 cardio.");
+lines.push("🚫 Skip: Heavy deadlifts, assault bike HIIT, or anything that spikes strain above 14.");
+}
+if (proLeft > 40) lines.push(`Still need ${proLeft}g protein — dinner is your last big chance.`);
+if (calLeft < 0) lines.push(`⚠️ Over calorie target by ${Math.abs(calLeft)} cal. Keep evening light.`);
+color = S.orange;
+}
+
+// ── LATE EVENING (7pm–9pm) ──
+else if (hour >= 19 && hour < 21) {
+lines.push(`⏰ ${hoursToSleep} hours to bed. Start winding down.`);
+
+if (woCal === 0 && r >= 50) {
+lines.push("Training this late is risky for sleep. If you must: light Zone 2 walk only, 20 min max.");
+lines.push("🚫 No strength training, HIIT, or heavy cardio. Elevated HR takes 60–90 min to normalize.");
+}
+
+// Cold plunge warning
+lines.push("🧊 Cold plunge now? Skip it. Norepinephrine + adrenaline spike will keep you wired.");
+lines.push("Cold exposure within 90 min of bed delays deep sleep onset for most people.");
+lines.push("✅ Better options: Warm shower, magnesium glycinate, nasal breathing, 10 min light walk.");
+
+// Sauna timing
+if (hour < 20) {
+lines.push("🧖 Infrared sauna is OK now if done by 8:30 PM — follow with warm (not cold) shower.");
+} else {
+lines.push("🧖 Too late for sauna — the heat rebound can delay sleep. Save it for tomorrow.");
+}
+
+if (proLeft > 20) lines.push(`⚡ Quick protein: Fairlife Elite (42g) or Barebells bar before 9 PM.`);
+color = S.purple;
+}
+
+// ── PRE-SLEEP (9pm–11pm) ──
+else if (hour >= 21 && hour < 23) {
+lines.push(`🌙 ${hoursToSleep <= 1 ? "Nearly" : hoursToSleep + " hours to"} bedtime. Protect your sleep.`);
+lines.push("🚫 No training, cold plunge, or sauna. Sympathetic activation will cost you deep sleep.");
+lines.push("🚫 No heavy meals. Digestion competes with sleep restoration.");
+lines.push("✅ Dim lights. Stop screens or use night mode. Nasal breathing.");
+lines.push("✅ CPAP ready. Aim for 7+ hours mask time — your AHI has been excellent.");
+
+if (ate > 0 && calLeft < -300) {
+lines.push(`Note: ${Math.abs(calLeft)} cal over target. Don't stress — one day doesn't define the journey. 280→${wt} speaks for itself.`);
+}
+
+// Sleep optimization
+if (hrvVal > 0 && hrvVal < 30) {
+lines.push(`⚠️ HRV at ${hrvVal}ms is low. Extra sleep will help recovery. Try for 8+ hours tonight.`);
+}
+color = S.purple;
+}
+
+// ── LATE NIGHT / EARLY MORNING (11pm–5am) ──
+else {
+lines.push("🌙 You should be sleeping, Scott. Every hour before midnight counts double for recovery.");
+lines.push("If you can't sleep: legs up the wall, 4-7-8 breathing, no phone.");
+lines.push("Your CPAP compliance has been great — trust the process.");
+color = S.red;
+}
+
+// ── UNIVERSAL: Nutrition gap warning ──
+if (hour >= 18 && proLeft > 60) {
+lines.push(`🚨 Protein emergency: ${proLeft}g short with limited meals left. Consider a double shake.`);
+}
+
+return { text: lines.join("\n"), color };
+};
+
+const css = `
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:'Plus Jakarta Sans',sans-serif; background:${S.bg}; color:${S.t1}; overflow-x:hidden; }
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
+input[type=number] { -moz-appearance:textfield; }
+
+.app { max-width:500px; margin:0 auto; min-height:100dvh; position:relative; padding-bottom:80px; }
+.hdr { padding:14px 20px; background:rgba(11,17,32,0.92); backdrop-filter:blur(16px); border-bottom:1px solid ${S.border}; position:sticky; top:0; z-index:50; }
+.hdr-row { display:flex; align-items:center; justify-content:space-between; }
+.logo { font-family:'JetBrains Mono',monospace; font-weight:800; font-size:20px; }
+.logo b { color:${S.green}; }
+.date { font-size:12px; color:${S.t2}; margin-top:2px; }
+.av { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,${S.cyan},${S.green}); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; }
+
+.card { background:${S.card}; border:1px solid ${S.border}; border-radius:16px; padding:18px; margin-bottom:14px; }
+.card-sm { padding:14px; margin-bottom:10px; }
+.card-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.card-title { font-size:16px; font-weight:700; display:flex; align-items:center; gap:10px; }
+.card-badge { font-size:12px; font-weight:700; padding:4px 10px; border-radius:20px; font-family:'JetBrains Mono',monospace; }
+.card-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+
+.sec { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; color:${S.t2}; letter-spacing:2px; text-transform:uppercase; padding:20px 0 10px; }
+
+.sg { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.stat { background:rgba(255,255,255,0.03); border:1px solid ${S.border}; border-radius:14px; padding:14px; }
+.stat-label { font-size:11px; color:${S.t2}; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+.stat-val { font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:800; margin-top:4px; line-height:1.1; }
+.stat-val.med { font-size:22px; }
+.stat-unit { font-size:13px; color:${S.t2}; font-weight:500; }
+.stat-sub { font-size:11px; margin-top:4px; font-weight:600; }
+
+.actions { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:0; }
+.act { background:${S.card}; border:1px solid ${S.border}; border-radius:16px; padding:18px 8px; text-align:center; cursor:pointer; transition:all 0.15s; min-height:88px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+.act:active { transform:scale(0.95); background:rgba(0,212,170,0.08); border-color:${S.green}; }
+.act-icon { font-size:28px; }
+.act-label { font-size:13px; font-weight:700; }
+
+.bnav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); max-width:500px; width:100%; background:rgba(11,17,32,0.96); backdrop-filter:blur(20px); border-top:1px solid ${S.border}; display:flex; z-index:100; padding:8px 0 max(10px, env(safe-area-inset-bottom)); }
+.bnav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px; cursor:pointer; transition:all 0.15s; }
+.bnav-icon { font-size:24px; opacity:0.4; transition:all 0.15s; }
+.bnav-label { font-size:10px; font-weight:700; color:${S.t3}; transition:all 0.15s; }
+.bnav-item.on .bnav-icon { opacity:1; }
+.bnav-item.on .bnav-label { color:${S.green}; }
+
+.brain { position:fixed; bottom:86px; right:max(calc(50% - 230px), 16px); width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,${S.green},${S.cyan}); display:flex; align-items:center; justify-content:center; font-size:28px; cursor:pointer; z-index:90; box-shadow:0 4px 24px rgba(0,212,170,0.3); transition:all 0.15s; }
+.brain:active { transform:scale(0.9); }
+
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:200; display:flex; align-items:flex-end; justify-content:center; }
+.modal { background:${S.card}; border-top:2px solid ${S.green}; border-radius:24px 24px 0 0; max-width:500px; width:100%; max-height:90dvh; overflow-y:auto; padding:20px 20px 32px; animation:slideUp 0.25s ease; }
+@keyframes slideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+.modal-bar { width:40px; height:4px; background:${S.t3}; border-radius:4px; margin:0 auto 16px; }
+.modal-title { font-size:20px; font-weight:800; margin-bottom:16px; }
+
+.inp { width:100%; background:rgba(255,255,255,0.05); border:1.5px solid ${S.border}; border-radius:14px; padding:14px 16px; color:${S.t1}; font-family:'JetBrains Mono',monospace; font-size:20px; text-align:center; outline:none; transition:border-color 0.2s; }
+.inp:focus { border-color:${S.green}; box-shadow:0 0 0 3px rgba(0,212,170,0.12); }
+.inp::placeholder { color:${S.t3}; font-size:14px; }
+.inp-row { display:flex; gap:10px; margin-bottom:12px; }
+.inp-label { font-size:12px; color:${S.t2}; font-weight:700; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; }
+
+.btn { width:100%; padding:16px; border-radius:14px; border:none; font-size:16px; font-weight:800; cursor:pointer; transition:all 0.15s; font-family:'Plus Jakarta Sans',sans-serif; }
+.btn:active { transform:scale(0.97); }
+.btn-g { background:${S.green}; color:#000; }
+.btn-p { background:linear-gradient(135deg,${S.purple},${S.pink}); color:#fff; }
+
+.tog { display:flex; gap:6px; margin-bottom:14px; }
+.tog-btn { flex:1; padding:12px; border-radius:12px; border:1.5px solid ${S.border}; background:transparent; color:${S.t2}; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.15s; }
+.tog-btn.on { background:${S.green}; color:#000; border-color:${S.green}; }
+
+.fi { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:12px; cursor:pointer; transition:all 0.12s; margin-bottom:4px; }
+.fi:active { background:rgba(0,212,170,0.12); transform:scale(0.98); }
+.fi-icon { font-size:22px; width:32px; text-align:center; }
+.fi-name { font-size:14px; font-weight:600; flex:1; }
+.fi-cal { font-family:'JetBrains Mono',monospace; font-size:13px; color:${S.green}; font-weight:700; }
+.fi-macro { font-family:'JetBrains Mono',monospace; font-size:10px; color:${S.t3}; }
+
+.fcat { background:${S.card}; border:1px solid ${S.border}; border-radius:14px; margin-bottom:8px; overflow:hidden; cursor:pointer; }
+.fcat-hdr { display:flex; justify-content:space-between; align-items:center; padding:16px 18px; }
+.fcat-name { font-size:16px; font-weight:700; }
+.fcat-arr { color:${S.t3}; font-size:16px; transition:transform 0.2s; }
+.fcat-arr.open { transform:rotate(90deg); }
+
+.wi { display:flex; align-items:center; gap:10px; padding:14px; background:${S.card}; border:1.5px solid ${S.border}; border-radius:14px; margin-bottom:8px; }
+.wi.done { border-color:${S.green}; background:rgba(0,212,170,0.04); }
+.wi-name { font-size:14px; font-weight:600; flex:1; }
+.wi-min { width:56px; background:rgba(255,255,255,0.06); border:1px solid ${S.border}; border-radius:10px; padding:8px; color:${S.cyan}; font-family:'JetBrains Mono',monospace; font-size:14px; text-align:center; outline:none; }
+.wi-min:focus { border-color:${S.green}; }
+.wi-log { padding:8px 14px; border-radius:10px; background:${S.green}; color:#000; font-size:12px; font-weight:800; border:none; cursor:pointer; }
+.wi-log:active { transform:scale(0.95); }
+
+.chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.chip { padding:10px 16px; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${S.border}; background:transparent; color:${S.t1}; transition:all 0.15s; }
+.chip:active { transform:scale(0.95); }
+
+.upzone { border:2px dashed ${S.border}; border-radius:16px; padding:32px 20px; text-align:center; cursor:pointer; transition:all 0.2s; margin-bottom:14px; }
+.upzone:active { border-color:${S.purple}; background:rgba(168,85,247,0.06); }
+
+.toast { position:fixed; bottom:92px; left:50%; transform:translateX(-50%); background:${S.green}; color:#000; padding:12px 24px; border-radius:14px; font-size:14px; font-weight:800; z-index:300; animation:pop 0.25s ease; box-shadow:0 4px 24px rgba(0,212,170,0.3); white-space:nowrap; }
+@keyframes pop { from { opacity:0; transform:translate(-50%,12px); } to { opacity:1; transform:translate(-50%,0); } }
+
+.wh-scroll { display:flex; gap:12px; overflow-x:auto; padding:8px 0; scrollbar-width:none; }
+.wh-scroll::-webkit-scrollbar { display:none; }
+.wh-item { text-align:center; flex-shrink:0; min-width:48px; }
+.wh-hr { font-size:11px; color:${S.t3}; }
+.wh-ic { font-size:20px; margin:4px 0; }
+.wh-t { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; }
+.hourly-bar { background:rgba(255,255,255,0.03); border-radius:12px; padding:12px 16px; margin-top:10px; }
+
+.ai-resp { background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.2); border-radius:14px; padding:16px; margin-top:14px; font-size:14px; line-height:1.7; white-space:pre-wrap; }
+
+.logged-item { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:rgba(0,212,170,0.04); border-radius:10px; margin-bottom:4px; }
+.logged-del { width:28px; height:28px; border-radius:50%; background:rgba(239,68,68,0.12); border:none; color:${S.red}; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-left:8px; flex-shrink:0; }
+.logged-del:active { background:${S.red}; color:#fff; transform:scale(0.9); }
+
+.qty-row { display:flex; align-items:center; gap:0; margin-top:8px; }
+.qty-btn { width:36px; height:36px; border-radius:10px; border:1.5px solid ${S.border}; background:transparent; color:${S.green}; font-size:20px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.qty-btn:active { background:rgba(0,212,170,0.15); transform:scale(0.9); }
+.qty-val { min-width:40px; text-align:center; font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:800; color:${S.cyan}; }
+.qty-unit { font-size:11px; color:${S.t3}; font-weight:600; margin-left:4px; }
+.qty-total { font-family:'JetBrains Mono',monospace; font-size:12px; color:${S.orange}; font-weight:700; margin-left:auto; }
+
+.api-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:8px; font-size:10px; font-weight:700; }
+.api-live { background:rgba(0,212,170,0.12); color:${S.green}; }
+.api-off { background:rgba(239,68,68,0.12); color:${S.red}; }
+
+.content { padding:0 16px; }
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:${S.border}; border-radius:4px; }
+`;
+
+const renderModal = () => {
+if (!modal) return null;
+return (
+<div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
+<div className="modal">
+<div className="modal-bar" />
+
+{modal === "bp" && (
+<>
+<div className="modal-title">❤️ Log Blood Pressure</div>
+<div className="tog">
+<div className={`tog-btn ${bpPer === "morning" ? "on" : ""}`} onClick={() => setBpPer("morning")}>☀️ Morning</div>
+<div className={`tog-btn ${bpPer === "evening" ? "on" : ""}`} onClick={() => setBpPer("evening")}>🌙 Evening</div>
+</div>
+<div className="inp-label">Systolic / Diastolic / Pulse</div>
+<div className="inp-row">
+<input className="inp" type="number" placeholder="SYS" value={bpS} onChange={e => setBpS(e.target.value)} inputMode="numeric" />
+<input className="inp" type="number" placeholder="DIA" value={bpD} onChange={e => setBpD(e.target.value)} inputMode="numeric" />
+<input className="inp" type="number" placeholder="♡" value={bpP} onChange={e => setBpP(e.target.value)} inputMode="numeric" />
+</div>
+<button className="btn btn-g" onClick={() => {
+if (!bpS || !bpD) { show("Enter SYS and DIA"); return; }
+setBp(p => [{ s: +bpS, d: +bpD, p: +bpP || null, per: bpPer, t: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }, ...p]);
+setBpS(""); setBpD(""); setBpP("");
+show(`✓ BP logged: ${bpS}/${bpD}`);
+setModal(null);
+}}>Save Reading</button>
+{bp.length > 0 && (
+<div style={{ marginTop: 16 }}>
+<div className="inp-label">Recent Readings</div>
+{bp.slice(0, 5).map((r, i) => {
+const cat = bpCat(r.s, r.d);
+return (
+<div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${S.border}` }}>
+<div>
+<span style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 800 }}>{r.s}/{r.d}</span>
+{r.p && <span style={{ fontSize: 14, color: S.t2, marginLeft: 10 }}>♡ {r.p}</span>}
+</div>
+<div style={{ textAlign: "right" }}>
+<div style={{ fontSize: 12, fontWeight: 700, color: cat.c }}>{cat.l}</div>
+<div style={{ fontSize: 11, color: S.t3 }}>{r.per === "morning" ? "☀️" : "🌙"} {r.t}</div>
+</div>
+</div>
+);
+})}
+</div>
+)}
+</>
+)}
+
+{modal === "weight" && (
+<>
+<div className="modal-title">⚖️ Log Body Metrics</div>
+<div className="sg" style={{ marginBottom: 14 }}>
+<div>
+<div className="inp-label">Weight</div>
+<input className="inp" type="number" placeholder="lbs" value={wt} onChange={e => setWt(e.target.value)} inputMode="decimal" />
+</div>
+<div>
+<div className="inp-label">Body Fat %</div>
+<input className="inp" type="number" placeholder="%" value={bf} onChange={e => setBf(e.target.value)} inputMode="decimal" />
+</div>
+<div>
+<div className="inp-label">Muscle Mass</div>
+<input className="inp" type="number" placeholder="lbs" value={mm} onChange={e => setMm(e.target.value)} inputMode="decimal" />
+</div>
+<div>
+<div className="inp-label">Visceral Fat</div>
+<input className="inp" type="number" placeholder="rating" value={vf} onChange={e => setVf(e.target.value)} inputMode="decimal" />
+</div>
+</div>
+<div className="inp-label" style={{ marginTop: 8 }}>WHOOP Recovery</div>
+<div className="sg" style={{ marginBottom: 14 }}>
+<div>
+<input className="inp" type="number" placeholder="Recovery %" value={rec} onChange={e => setRec(e.target.value)} inputMode="numeric" />
+</div>
+<div>
+<input className="inp" type="number" placeholder="HRV ms" value={hrv} onChange={e => setHrv(e.target.value)} inputMode="numeric" />
+</div>
+</div>
+<div className="inp-label">CPAP</div>
+<div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+<input className="inp" type="number" placeholder="AHI" value={ahi} onChange={e => setAhi(e.target.value)} inputMode="decimal" />
+<input className="inp" type="number" placeholder="Hours" value={cpH} onChange={e => setCpH(e.target.value)} inputMode="decimal" />
+<input className="inp" type="number" placeholder="Mask %" value={cpM} onChange={e => setCpM(e.target.value)} inputMode="numeric" />
+</div>
+<button className="btn btn-g" onClick={() => { show("✓ Metrics saved"); setModal(null); }}>Save All Metrics</button>
+</>
+)}
+
+{modal === "sleep" && (
+<>
+<div className="modal-title">😴 Sleep & Recovery</div>
+<div className="sg" style={{ marginBottom: 14 }}>
+<div>
+<div className="inp-label">Sleep Hours</div>
+<input className="inp" type="number" placeholder="hrs" value={slp} onChange={e => setSlp(e.target.value)} inputMode="decimal" />
+</div>
+<div>
+<div className="inp-label">Sleep Score %</div>
+<input className="inp" type="number" placeholder="%" value={rec} onChange={e => setRec(e.target.value)} inputMode="numeric" />
+</div>
+<div>
+<div className="inp-label">HRV</div>
+<input className="inp" type="number" placeholder="ms" value={hrv} onChange={e => setHrv(e.target.value)} inputMode="numeric" />
+</div>
+<div>
+<div className="inp-label">Strain</div>
+<input className="inp" type="number" placeholder="0-21" value={strain} onChange={e => setStrain(e.target.value)} inputMode="decimal" />
+</div>
+</div>
+<div className="inp-label">CPAP Data</div>
+<div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+<input className="inp" type="number" placeholder="AHI" value={ahi} onChange={e => setAhi(e.target.value)} inputMode="decimal" />
+<input className="inp" type="number" placeholder="Hours" value={cpH} onChange={e => setCpH(e.target.value)} inputMode="decimal" />
+<input className="inp" type="number" placeholder="Seal %" value={cpM} onChange={e => setCpM(e.target.value)} inputMode="numeric" />
+</div>
+<button className="btn btn-g" onClick={() => { show("✓ Sleep data saved"); setModal(null); }}>Save Sleep Data</button>
+</>
+)}
+</div>
+</div>
+);
+};
+
+return (
+<>
+<style>{css}</style>
+<div className="app">
+<div className="hdr">
+<div className="hdr-row">
+<div>
+<div className="logo">Vital<b>Command</b> IQ</div>
+<div className="date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</div>
+</div>
+<div className="av">SW</div>
+</div>
+</div>
+
+{/* ══ HOME TAB ══ */}
+{tab === "home" && (
+<div className="content">
+<div className="card" style={{ marginTop: 14 }}>
+<div style={{ fontSize: 24, fontWeight: 800 }}>
+{/* Daily Verse */}
+<div style={{ background: "linear-gradient(135deg, rgba(168,85,247,0.08), rgba(236,72,153,0.05))", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 18, padding: 18, marginBottom: 16 }}>
+<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+<span style={{ fontSize: 18 }}>{String.fromCodePoint(0x1F4D6)}</span>
+<span style={{ fontSize: 12, fontWeight: 800, color: S.purple, letterSpacing: 1.5, textTransform: "uppercase" }}>{todayVerse.ref}</span>
+</div>
+<div style={{ fontSize: 14, lineHeight: 1.7, color: S.t1, fontStyle: "italic", marginBottom: 12 }}>{String.fromCharCode(8220)}{todayVerse.t}{String.fromCharCode(8221)}</div>
+<div style={{ fontSize: 13, fontWeight: 700, color: S.purple, paddingTop: 10, borderTop: "1px solid rgba(168,85,247,0.15)" }}>{todayVerse.d}</div>
+</div>
+
+
+
+{greet}, <span style={{ color: S.green }}>Scott</span> 💪
+</div>
+{weather && (
+<div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12 }}>
+<div style={{ fontSize: 42 }}>{wIcon(weather.code)}</div>
+<div><div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 36, fontWeight: 800 }}>{weather.temp}°</div></div>
+<div style={{ flex: 1 }}>
+<div style={{ fontSize: 14, fontWeight: 600 }}>Madison · Feels {weather.feels}°</div>
+<div style={{ fontSize: 12, color: S.t2 }}>AQI <span style={{ color: S.green }}>Good</span> · UV {weather.uv} · 💧 {weather.hum}%</div>
+</div>
+</div>
+)}
+{weather && (
+<div className="hourly-bar">
+<div className="wh-scroll">
+{weather.hourly.map((h, i) => (
+<div className="wh-item" key={i}>
+<div className="wh-hr">{h.hr}</div>
+<div className="wh-ic">{wIcon(h.code)}</div>
+<div className="wh-t">{h.temp}°</div>
+</div>
+))}
+</div>
+</div>
+)}
+{rec && (() => {
+const tip = aiTip();
+const lines = tip.text.split("\n");
+const headline = lines[0];
+return (
+<div style={{ marginTop: 14, padding: "14px 16px", background: `rgba(${+rec >= 67 ? "0,212,170" : +rec >= 34 ? "245,158,11" : "239,68,68"},0.06)`, border: `1px solid ${tip.color}22`, borderRadius: 14, cursor: "pointer" }}
+onClick={() => setPlanOpen(p => !p)}>
+<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+<div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+<span style={{ fontSize: 16 }}>🧠</span>
+<div style={{ fontSize: 14, fontWeight: 700, color: tip.color, flex: 1 }}>{headline}</div>
+</div>
+<span style={{ fontSize: 14, color: S.t3, transform: planOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>▸</span>
+</div>
+{planOpen && lines.length > 1 && (
+<div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${S.border}` }}>
+{lines.slice(1).map((line, i) => (
+<div key={i} style={{ fontSize: 13, lineHeight: 1.6, color: line.startsWith("🚫") ? S.red : line.startsWith("✅") || line.startsWith("✓") ? S.green : line.startsWith("⚠️") || line.startsWith("⚡") || line.startsWith("🚨") ? S.orange : S.t2, marginBottom: 3 }}>
+{line}
+</div>
+))}
+</div>
+)}
+</div>
+);
+})()}
+</div>
+
+<div className="actions">
+<div className="act" onClick={() => setTab("food")}><div className="act-icon">🍽️</div><div className="act-label">Log Food</div></div>
+<div className="act" onClick={() => setModal("weight")}><div className="act-icon">⚖️</div><div className="act-label">Log Weight</div></div>
+<div className="act" onClick={() => setModal("bp")}><div className="act-icon">❤️</div><div className="act-label">Log BP</div></div>
+<div className="act" onClick={() => setTab("train")}><div className="act-icon">🏋️</div><div className="act-label">Workout</div></div>
+<div className="act" onClick={() => setModal("sleep")}><div className="act-icon">😴</div><div className="act-label">Sleep</div></div>
+<div className="act" onClick={() => setTab("ai")}><div className="act-icon">📷</div><div className="act-label">Upload</div></div>
+</div>
+
+<div className="sec">Today's Snapshot</div>
+
+<div className="card" style={{ borderLeft: `3px solid ${S.blue}` }}>
+<div className="card-hdr">
+<div className="card-title"><span style={{ fontSize: 20 }}>⚖️</span> Body Composition</div>
+<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+<span className={`api-badge ${withingsStatus === "saved" ? "api-live" : "api-off"}`}>{withingsStatus === "saved" ? "● SAVED" : "○ —"}</span>
+<div className="card-badge" style={{ background: "rgba(0,212,170,0.12)", color: S.green }}>-{(280 - (parseFloat(wt) || 210)).toFixed(1)} Lbs</div>
+</div>
+</div>
+<div className="sg" style={{ padding: 0 }}>
+<div className="stat"><div className="stat-label">Weight</div><div className="stat-val">{wt || "--"}<span className="stat-unit"> lbs</span></div></div>
+<div className="stat"><div className="stat-label">Muscle Mass</div><div className="stat-val">{mm || "--"}<span className="stat-unit"> lbs</span></div></div>
+<div className="stat"><div className="stat-label">Visceral Fat</div><div className="stat-val">{vf || "--"}</div><div className="stat-sub" style={{ color: S.green }}>↓ Target: 7</div></div>
+<div className="stat"><div className="stat-label">Body Fat</div><div className="stat-val">{bf || "--"}<span className="stat-unit">%</span></div></div>
+</div>
+</div>
+
+<div className="card" style={{ borderLeft: `3px solid ${S.red}`, cursor: "pointer" }} onClick={() => setModal("bp")}>
+<div className="card-hdr">
+<div className="card-title"><span style={{ fontSize: 20 }}>❤️</span> Blood Pressure</div>
+{bp.length === 0 && <div className="card-badge" style={{ background: "rgba(245,158,11,0.12)", color: S.orange }}>Pending</div>}
+</div>
+<div className="sg" style={{ padding: 0 }}>
+<div className="stat"><div className="stat-label">{bp.length > 0 ? `${bp[0].per === "morning" ? "AM" : "PM"} Reading` : "AM Reading"}</div><div className="stat-val med">{bp.length > 0 ? `${bp[0].s}/${bp[0].d}` : "–/–"}</div>{bp.length === 0 && <div className="stat-sub" style={{ color: S.red }}>🚨 Tap to log</div>}</div>
+<div className="stat"><div className="stat-label">Pulse</div><div className="stat-val med">{bp.length > 0 && bp[0].p ? bp[0].p : "70"}<span className="stat-unit"> bpm</span></div></div>
+</div>
+</div>
+
+<div className="card" style={{ borderLeft: `3px solid ${S.purple}` }}>
+<div className="card-hdr">
+<div className="card-title"><span style={{ fontSize: 20 }}>🌙</span> Sleep & Recovery</div>
+<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+<span className={`api-badge ${whoopStatus === "saved" ? "api-live" : "api-off"}`}>{whoopStatus === "saved" ? "● SAVED" : "○ —"}</span>
+<div className="card-badge" style={{ background: `rgba(${+rec >= 67 ? "0,212,170" : +rec >= 34 ? "245,158,11" : "239,68,68"},0.12)`, color: recColor(rec) }}>{rec || "--"}%</div>
+</div>
+</div>
+<div className="sg" style={{ padding: 0 }}>
+<div className="stat"><div className="stat-label">Sleep Score</div><div className="stat-val">{rec || "--"}<span className="stat-unit">%</span></div></div>
+<div className="stat"><div className="stat-label">HRV</div><div className="stat-val">{hrv || "--"}<span className="stat-unit"> ms</span></div></div>
+</div>
+</div>
+
+<div className="card" style={{ borderLeft: `3px solid ${S.orange}` }}>
+<div className="card-hdr">
+<div className="card-title"><span style={{ fontSize: 20 }}>🍽️</span> Nutrition</div>
+<div className="card-badge" style={{ background: "rgba(245,158,11,0.12)", color: S.orange }}>{tCal} cal</div>
+</div>
+<div style={{ display: "flex", justifyContent: "space-around", padding: "8px 0" }}>
+<Ring val={tPro} max={goals.pro} color={S.green} label="PROTEIN" />
+<Ring val={tCarb} max={goals.carb} color={S.orange} label="CARBS" />
+<Ring val={tFat} max={goals.fat} color={S.pink} label="FAT" />
+<Ring val={tCal} max={goals.cal} color={S.cyan} label="CALORIES" />
+</div>
+</div>
+</div>
+)}
+
+{/* ══ FOOD TAB ══ */}
+{tab === "food" && (
+<div className="content">
+
+{/* Barcode Scanner (Camera) */}
+<div style={{ padding: "0 16px", marginBottom: 10 }}>
+<button className="btn" style={{ width: "100%", background: "rgba(6,182,212,0.08)", color: S.cyan, border: "1.5px solid rgba(6,182,212,0.25)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, height: 52 }}
+onClick={() => {
+if (!navigator.mediaDevices) { show("Camera not available"); return; }
+const inp = document.createElement("input");
+inp.type = "file";
+inp.accept = "image/*";
+inp.capture = "environment";
+inp.onchange = async (ev) => {
+const file = ev.target.files[0];
+if (!file) return;
+show("Scanning barcode...");
+const reader = new FileReader();
+reader.onload = async (re) => {
+const img = re.target.result;
+try {
+const resp = await fetch("https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&search_terms=" + encodeURIComponent(file.name.replace(/\.[^.]+$/, "")));
+show("Use manual UPC: tap and enter the number from the package");
+const code = prompt("Enter the barcode number shown on the package:");
+if (!code || !code.trim()) return;
+const r = await fetch("https://world.openfoodfacts.org/api/v0/product/" + code.trim() + ".json");
+const d = await r.json();
+if (d.status === 1 && d.product) {
+const p = d.product; const nm = p.product_name || "Unknown"; const nu = p.nutriments || {};
+const cal = Math.round(nu["energy-kcal_serving"] || nu["energy-kcal_100g"] || 0);
+const pro = Math.round(nu.proteins_serving || nu.proteins_100g || 0);
+const carb = Math.round(nu.carbohydrates_serving || nu.carbohydrates_100g || 0);
+const fat = Math.round(nu.fat_serving || nu.fat_100g || 0);
+if (confirm(nm + " - " + cal + " cal, " + pro + "g protein. Log this?")) {
+setFoods(prev => [...prev, { n: nm, c: cal, p: pro, cb: carb, f: fat, i: String.fromCodePoint(0x1F3F7), time: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) }]);
+show("Logged " + nm);
+}
+} else { show("Product not found for that barcode"); }
+} catch(e) { show("Scan failed - try again"); }
+};
+reader.readAsDataURL(file);
+};
+inp.click();
+}}>
+{String.fromCodePoint(0x1F4F7)} Scan Barcode / Enter UPC
+</button>
+</div>
+<div className="card" style={{ marginTop: 14 }}>
+<div style={{ display: "flex", justifyContent: "space-around" }}>
+<Ring val={tCal} max={goals.cal} color={S.cyan} label="CAL" />
+<Ring val={tPro} max={goals.pro} color={S.green} label="PRO" />
+<Ring val={tCarb} max={goals.carb} color={S.orange} label="CARB" />
+<Ring val={tFat} max={goals.fat} color={S.pink} label="FAT" />
+</div>
+</div>
+
+{foods.length > 0 && (
+<>
+<div className="sec" style={{ paddingLeft: 0 }}>Logged Today</div>
+{foods.map((f, i) => (
+<div className="logged-item" key={i}>
+<div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+<span style={{ fontSize: 18 }}>{f.i}</span>
+<div style={{ minWidth: 0, flex: 1 }}>
+<span style={{ fontSize: 13, fontWeight: 600 }}>{f.qty && f.qty > 1 ? `${f.qty}× ` : ""}{f.n}</span>
+<div style={{ fontSize: 10, color: S.t3 }}>{f.p}p · {f.cb}c · {f.f}f · {f.t}</div>
+</div>
+</div>
+<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 700, color: S.green, flexShrink: 0 }}>{f.c}</div>
+<button className="logged-del" onClick={() => { setFoods(p => p.filter((_, j) => j !== i)); show("Removed " + f.n); }}>×</button>
+</div>
+))}
+</>
+)}
+
+<div className="sec" style={{ paddingLeft: 0 }}>Quick Add</div>
+{Object.entries(FOODS).map(([cat, items]) => (
+<div className="fcat" key={cat}>
+<div className="fcat-hdr" onClick={() => setOpenCat(openCat === cat ? null : cat)}>
+<span className="fcat-name">{cat}</span>
+<span className={`fcat-arr ${openCat === cat ? "open" : ""}`}>▸</span>
+</div>
+{openCat === cat && (
+<div style={{ padding: "0 6px 8px" }}>
+{items.map((item, i) => {
+const qKey = `${cat}-${i}`;
+const qty = foodQty[qKey] || 1;
+const unit = item.unit || "serving";
+return (
+<div key={i} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: "10px 14px", marginBottom: 6, border: `1px solid ${S.border}` }}>
+<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+<span style={{ fontSize: 22, width: 32, textAlign: "center" }}>{item.i}</span>
+<div style={{ flex: 1 }}>
+<div style={{ fontSize: 14, fontWeight: 600 }}>{item.n}</div>
+<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: S.t3 }}>{item.p}p · {item.cb}c · {item.f}f per {unit}</div>
+</div>
+</div>
+<div style={{ display: "flex", alignItems: "center", marginTop: 8, gap: 6 }}>
+<div className="qty-btn" onClick={() => setFoodQty(p => ({ ...p, [qKey]: Math.max(1, (p[qKey] || 1) - 1) }))}>−</div>
+<div className="qty-val">{qty}</div>
+<div className="qty-btn" onClick={() => setFoodQty(p => ({ ...p, [qKey]: (p[qKey] || 1) + 1 }))}>+</div>
+<span className="qty-unit">{unit}{qty > 1 ? "s" : ""}</span>
+<span className="qty-total">{item.c * qty} cal</span>
+<button style={{ marginLeft: "auto", padding: "8px 16px", borderRadius: 10, background: S.green, color: "#000", fontSize: 13, fontWeight: 800, border: "none", cursor: "pointer" }}
+onClick={() => {
+setFoods(p => [...p, { ...item, c: item.c * qty, p: item.p * qty, cb: item.cb * qty, f: Math.round(item.f * qty * 10) / 10, qty, t: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+setFoodQty(p => ({ ...p, [qKey]: 1 }));
+show(`✓ ${qty}× ${item.n}`);
+}}>+ Add</button>
+</div>
+</div>
+);
+})}
+</div>
+)}
+</div>
+))}
+</div>
+)}
+
+{/* ══ TRAIN TAB ══ */}
+{tab === "train" && (
+<div className="content" style={{ paddingTop: 14 }}>
+
+{/* Workout Summary Stats */}
+<div className="sg" style={{ marginBottom: 14 }}>
+<div className="card card-sm" style={{ margin: 0 }}>
+<div className="stat-label">Total Time</div>
+<div className="stat-val">{tWoMin}<span className="stat-unit"> min</span></div>
+</div>
+<div className="card card-sm" style={{ margin: 0 }}>
+<div className="stat-label">Est. Calories</div>
+<div className="stat-val">{tWoCal}<span className="stat-unit"> cal</span></div>
+</div>
+<div className="card card-sm" style={{ margin: 0 }}>
+<div className="stat-label">Exercises</div>
+<div className="stat-val">{workouts.length}</div>
+</div>
+</div>
+
+{/* AI Workout Recap Button */}
+{workouts.length > 0 && (
+<button className="btn btn-g" style={{ width: "100%", marginBottom: 14, height: 52, fontSize: 15 }}
+onClick={async () => {
+setWktSummaryLoading(true);
+const strengthWork = workouts.filter(w => w.type === "strength");
+const cardioWork = workouts.filter(w => w.type === "cardio" || w.type === "conditioning");
+const recoveryWork = workouts.filter(w => w.type === "recovery");
+let details = "WORKOUT SESSION LOG:\n";
+strengthWork.forEach(w => {
+details += w.name + ": " + w.mins + " min";
+if (w.sets && w.sets.length > 0) {
+details += " | " + w.sets.map((s, i) => "Set " + (i+1) + ": " + s.reps + " reps @ " + s.wt + " lbs").join(", ");
+const totalVol = w.sets.reduce((sum, s) => sum + (s.reps * s.wt), 0);
+details += " | Volume: " + totalVol + " lbs";
+}
+details += "\n";
+});
+cardioWork.forEach(w => { details += w.name + ": " + w.mins + " min, ~" + w.cal + " cal\n"; });
+recoveryWork.forEach(w => { details += w.name + ": " + w.mins + " min\n"; });
+details += "\nTotal: " + tWoMin + " min, " + tWoCal + " est cal burned";
+details += "\nRecovery: " + (rec || "N/A") + "%, HRV: " + (hrv || "N/A") + ", Strain: " + (strain || "N/A");
+try {
+const resp = await fetch("https://zestful-education-production-88e7.up.railway.app/ai/analyze", {
+method: "POST", headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+system: "You are VitalCommand AI workout coach for Scott Watkins (58, 213 lbs, 165+ lbs muscle). Provide a concise workout recap: total volume lifted, muscle groups hit, cardio zone estimates, calories assessment (merge with WHOOP/Garmin if data available), recovery recommendations. Be specific with numbers. Keep it under 200 words. If both strength and cardio were done, give a COMBINED summary not separate.",
+messages: [{ role: "user", content: details }]
+})
+});
+const data = await resp.json();
+const txt = data.content ? data.content.map(c => c.text || "").join("") : "Could not generate summary";
+setWktSummary(txt);
+} catch(e) { setWktSummary("AI recap unavailable. Upload WHOOP/Garmin screenshots for manual analysis."); }
+setWktSummaryLoading(false);
+}}>
+{wktSummaryLoading ? "\u2728 Generating Recap..." : "\u2728 AI Workout Recap"}
+</button>
+)}
+
+{/* AI Summary Display */}
+{wktSummary && (
+<div style={{ background: "rgba(0,212,170,0.06)", border: "1.5px solid " + S.green, borderRadius: 14, padding: 16, marginBottom: 14 }}>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+<div style={{ fontSize: 13, fontWeight: 800, color: S.green, letterSpacing: 1 }}>\u2728 WORKOUT RECAP</div>
+<button style={{ background: "none", border: "none", color: S.t3, fontSize: 16, cursor: "pointer" }} onClick={() => setWktSummary(null)}>x</button>
+</div>
+<div style={{ fontSize: 13, lineHeight: 1.7, color: S.t1, whiteSpace: "pre-wrap" }}>{wktSummary}</div>
+</div>
+)}
+
+{/* Completed Exercises */}
+{workouts.length > 0 && (
+<>
+<div className="sec" style={{ paddingLeft: 0 }}>Completed</div>
+{workouts.map((w, i) => (
+<div className="wi done" key={i} style={{ flexDirection: "column", alignItems: "stretch" }}>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+<div className="wi-name">{w.type === "strength" ? "\ud83c\udfcb\ufe0f" : w.type === "cardio" ? "\ud83d\udeb4" : "\ud83e\uddd6"} {w.name}</div>
+<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: S.green }}>{w.mins}m {w.cal ? "\u00b7 " + w.cal + "cal" : ""}</div>
+<button className="logged-del" onClick={() => { setWkts(p => p.filter((_, j) => j !== i)); show("Removed " + w.name); }}>x</button>
+</div>
+</div>
+{w.sets && w.sets.length > 0 && (
+<div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+{w.sets.map((s, si) => (
+<div key={si} style={{ background: "rgba(0,212,170,0.08)", borderRadius: 8, padding: "3px 8px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: S.cyan }}>
+S{si+1}: {s.reps}x{s.wt}lb
+</div>
+))}
+<div style={{ background: "rgba(168,85,247,0.1)", borderRadius: 8, padding: "3px 8px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: S.purple }}>
+Vol: {w.sets.reduce((sum, s) => sum + (s.reps * s.wt), 0)} lbs
+</div>
+</div>
+)}
+</div>
+))}
+</>
+)}
+
+{/* Exercise Categories */}
+{Object.entries(WORKOUTS).map(([cat, exs]) => (
+<div key={cat}>
+<div className="sec" style={{ paddingLeft: 0 }}>{cat}</div>
+{exs.map((ex, i) => {
+const done = workouts.some(w => w.name === ex.n);
+const isStrength = ex.type === "strength";
+const sets = woSets[ex.n] || [];
+return (
+<div className={"wi " + (done ? "done" : "")} key={i} style={{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
+<div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+<div className="wi-name" style={{ flex: 1 }}>{ex.n}</div>
+{!isStrength && (
+<>
+<input className="wi-min" type="number" placeholder="min" inputMode="numeric"
+style={{ width: 55 }}
+value={woMins[ex.n] || ""} onChange={e => setWoMins(p => ({ ...p, [ex.n]: e.target.value }))} />
+<button className="wi-log" onClick={() => {
+const m = parseInt(woMins[ex.n]) || 0;
+if (m <= 0) { show("Enter minutes"); return; }
+setWkts(p => [...p, { name: ex.n, mins: m, cal: Math.round(m * ex.cpm), type: ex.type }]);
+show("\u2713 " + ex.n + " \u2014 " + m + "min");
+}}>Log</button>
+</>
+)}
+{isStrength && (
+<button className="wi-log" style={{ minWidth: 70 }} onClick={() => {
+const s = woSets[ex.n] || [];
+if (s.length === 0) { show("Add at least one set"); return; }
+const totalMin = Math.max(s.length * 2, parseInt(woMins[ex.n]) || s.length * 2);
+setWkts(p => [...p, { name: ex.n, mins: totalMin, cal: Math.round(totalMin * ex.cpm), type: "strength", sets: [...s] }]);
+setWoSets(p => { const np = {...p}; delete np[ex.n]; return np; });
+setWoCurrentReps(p => { const np = {...p}; delete np[ex.n]; return np; });
+setWoCurrentWt(p => { const np = {...p}; delete np[ex.n]; return np; });
+show("\u2713 " + ex.n + " \u2014 " + s.length + " sets");
+}}>Log All</button>
+)}
+</div>
+
+{/* Sets/Reps/Weight for strength exercises */}
+{isStrength && (
+<div style={{ paddingLeft: 4 }}>
+{sets.length > 0 && (
+<div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 6 }}>
+{sets.map((s, si) => (
+<div key={si} style={{ background: "rgba(6,182,212,0.1)", borderRadius: 8, padding: "2px 8px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: S.cyan, display: "flex", alignItems: "center", gap: 4 }}>
+S{si+1}: {s.reps}x{s.wt}lb
+<span style={{ color: S.red, cursor: "pointer", fontSize: 13 }} onClick={() => {
+setWoSets(p => ({ ...p, [ex.n]: (p[ex.n] || []).filter((_, j) => j !== si) }));
+}}>x</span>
+</div>
+))}
+</div>
+)}
+<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+<input type="number" placeholder="reps" inputMode="numeric" style={{ width: 50, background: "rgba(255,255,255,0.05)", border: "1px solid " + S.border, borderRadius: 8, color: S.t1, padding: "6px 8px", fontSize: 13, fontFamily: "'JetBrains Mono',monospace" }}
+value={woCurrentReps[ex.n] || ""} onChange={e => setWoCurrentReps(p => ({...p, [ex.n]: e.target.value}))} />
+<span style={{ color: S.t3, fontSize: 11 }}>x</span>
+<input type="number" placeholder="lbs" inputMode="numeric" style={{ width: 55, background: "rgba(255,255,255,0.05)", border: "1px solid " + S.border, borderRadius: 8, color: S.t1, padding: "6px 8px", fontSize: 13, fontFamily: "'JetBrains Mono',monospace" }}
+value={woCurrentWt[ex.n] || ""} onChange={e => setWoCurrentWt(p => ({...p, [ex.n]: e.target.value}))} />
+<button style={{ background: S.cyan, color: "#000", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }} onClick={() => {
+const r = parseInt(woCurrentReps[ex.n]) || 0;
+const w = parseInt(woCurrentWt[ex.n]) || 0;
+if (r <= 0 || w <= 0) { show("Enter reps and weight"); return; }
+setWoSets(p => ({ ...p, [ex.n]: [...(p[ex.n] || []), { reps: r, wt: w }] }));
+setWoCurrentReps(p => ({...p, [ex.n]: ""}));
+show("Set " + ((woSets[ex.n] || []).length + 1) + " added");
+}}>+ Set</button>
+</div>
+</div>
+)}
+</div>
+);
+})}
+</div>
+))}
+</div>
+)}
+
+{/* ══ AI TAB ══ */}
+{tab === "ai" && (
+<div className="content" style={{ paddingTop: 14 }}>
+<div className="card">
+<div className="card-title" style={{ marginBottom: 14 }}><span style={{ fontSize: 20 }}>📷</span> Upload Device Screenshot</div>
+<div style={{ fontSize: 13, color: S.t2, marginBottom: 12 }}>AI will analyze and extract your metrics</div>
+
+<div className="chips">
+{["📱 Garmin", "🟢 WHOOP", "❤️ Blood Pressure", "💨 CPAP / myAir", "⚖️ Withings", "💍 Oura Ring", "📸 Food Photo", "🩸 Lab Results"].map(ch => (
+<div className="chip" key={ch}>{ch}</div>
+))}
+</div>
+
+<div className="upzone" onClick={() => fileRef.current?.click()}>
+<div style={{ fontSize: 36 }}>📷</div>
+<div style={{ fontSize: 15, fontWeight: 600, marginTop: 8 }}>Tap to upload screenshot or photo</div>
+<div style={{ fontSize: 12, color: S.t3, marginTop: 4 }}>Camera or gallery · Select multiple</div>
+</div>
+
+
+<input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }}
+onChange={(e) => {
+const files = Array.from(e.target.files || []);
+if (files.length === 0) return;
+files.forEach(f => {
+const reader = new FileReader();
+reader.onload = (ev) => {
+setAiUploads(p => [...p, { name: f.name, data: ev.target.result, type: f.type }]);
+};
+reader.readAsDataURL(f);
+});
+show(`✓ ${files.length} photo${files.length > 1 ? "s" : ""} uploaded`);
+}}
+/>
+
+{aiUploads.length > 0 && (
+<div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+{aiUploads.map((f, i) => (
+<div key={i} style={{ position: "relative", width: 64, height: 64, borderRadius: 10, overflow: "hidden", border: `1px solid ${S.border}` }}>
+<img src={f.data} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+<div style={{ position: "absolute", top: 2, right: 2, width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.7)",
+display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, cursor: "pointer", color: "#fff" }}
+onClick={() => setAiUploads(p => p.filter((_, j) => j !== i))}>×</div>
+</div>
+))}
+</div>
+)}
+
+<button className="btn btn-p" style={{ marginBottom: 14 }} onClick={async () => {
+if (!aiText.trim() && aiUploads.length === 0) { show("Upload a photo or ask a question"); return; }
+setAiLoading(true); setAiResp("");
+
+const ctx = {
+weight: wt, bodyFat: bf, muscle: mm, visceral: vf,
+recovery: rec, hrv, sleep: slp, strain,
+cpap: { ahi, hours: cpH, mask: cpM },
+bp: bp.slice(0, 3),
+nutrition: { cal: tCal, protein: tPro, carbs: tCarb, fat: tFat, items: foods.length },
+workouts: workouts.map(w => `${w.name} ${w.mins}m`),
+};
+
+const userContent = [];
+aiUploads.forEach(img => {
+userContent.push({ type: "image", source: { type: "base64", media_type: img.type, data: img.data.split(",")[1] } });
+});
+userContent.push({
+type: "text",
+text: `Health context: ${JSON.stringify(ctx)}\n\nRequest: ${aiText || "Analyze all uploaded screenshots. Extract every metric you can see. Return a JSON block with extracted values, then provide insights and recommendations."}`
 });
 
-// ---- WHOOP Data (POST /whoop/recovery) ----
-// Placeholder for future WHOOP OAuth integration
-app.get("/whoop/recovery", async (req, res) => {
-  // TODO: Add WHOOP OAuth token refresh + data fetch
-  return res.status(501).json({ 
-    error: "WHOOP API not yet configured",
-    hint: "Use screenshot upload + AI extraction for now" 
-  });
-});
+try {
+const PROXY = "https://zestful-education-production-88e7.up.railway.app";
+const res = await fetch(`${PROXY}/ai/analyze`, {
+method: "POST", headers: { "Content-Type": "application/json" },
+body: JSON.stringify({
+system: `You are VitalCommand AI for Scott Watkins (58, lost 70+lbs 280→${wt || 210}). He trains full-body strength + cardio with kettlebells, barbells, assault bike, rower, elliptical. Tracks WHOOP, Garmin, Withings scale, CPAP/myAir. Protein goal 200g/day, 2000 cal/day.
 
-// ---- Withings Data (POST /withings/body) ----
-// Placeholder for future Withings OAuth integration
-app.get("/withings/body", async (req, res) => {
-  // TODO: Add Withings OAuth token refresh + data fetch
-  return res.status(501).json({ 
-    error: "Withings API not yet configured",
-    hint: "Use screenshot upload + AI extraction for now" 
-  });
+CRITICAL: When analyzing device screenshots, ALWAYS start your response with a JSON block wrapped in \`\`\`json ... \`\`\` containing ALL extracted metrics. Use these exact keys (omit any you can't find):
+{
+  "weight": number (lbs),
+  "body_fat": number (%),
+  "muscle_mass": number (lbs),
+  "visceral_fat": number (rating),
+  "recovery": number (% 0-100),
+  "hrv": number (ms),
+  "rhr": number (resting heart rate bpm),
+  "sleep_hours": number,
+  "sleep_score": number (% 0-100),
+  "strain": number (0-21),
+  "spo2": number (%),
+  "resp_rate": number (breaths/min),
+  "ahi": number,
+  "cpap_hours": number,
+  "cpap_mask": number (% seal/fit),
+  "steps": number,
+  "calories_burned": number,
+  "bp_systolic": number,
+  "bp_diastolic": number,
+  "bp_pulse": number
+}
+
+After the JSON block, provide brief actionable insights. Be concise and direct.`,
+messages: [{ role: "user", content: userContent }],
+}),
 });
+const data = await res.json();
+const text = data.content?.map(c => c.text || "").join("\n") || "No response.";
+setAiResp(text);
+
+// Extract structured JSON from AI response
+try {
+const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
+if (jsonMatch) {
+const extracted = JSON.parse(jsonMatch[1]);
+setAiExtracted(extracted);
+show("✓ Metrics extracted — review below");
+} else {
+// Fallback regex extraction
+const ex = {};
+const tryEx = (pattern, key) => { const m = text.match(pattern); if (m) ex[key] = m[1]; };
+tryEx(/weight[:\s]*(\d+\.?\d*)\s*(?:lbs|pounds)?/i, "weight");
+tryEx(/body\s*fat[:\s]*(\d+\.?\d*)\s*%?/i, "body_fat");
+tryEx(/muscle\s*mass[:\s]*(\d+\.?\d*)/i, "muscle_mass");
+tryEx(/visceral\s*fat[:\s]*(\d+\.?\d*)/i, "visceral_fat");
+tryEx(/recovery[:\s]*(\d+)\s*%?/i, "recovery");
+tryEx(/hrv[:\s]*(\d+)\s*(?:ms)?/i, "hrv");
+tryEx(/strain[:\s]*(\d+\.?\d*)/i, "strain");
+tryEx(/ahi[:\s]*(\d+\.?\d*)/i, "ahi");
+tryEx(/(?:cpap|mask)\s*(?:hours?|time)[:\s]*(\d+\.?\d*)/i, "cpap_hours");
+tryEx(/(?:mask|seal)\s*(?:fit|%|score)[:\s]*(\d+)/i, "cpap_mask");
+tryEx(/sleep\s*(?:hours?|duration)[:\s]*(\d+\.?\d*)/i, "sleep_hours");
+tryEx(/sleep\s*(?:score|quality)[:\s]*(\d+)/i, "sleep_score");
+tryEx(/(?:resting\s*)?(?:heart\s*rate|rhr|pulse)[:\s]*(\d+)/i, "rhr");
+tryEx(/steps[:\s]*(\d[\d,]*)/i, "steps");
+if (Object.keys(ex).length > 0) {
+setAiExtracted(ex);
+show("✓ Metrics found — review below");
+}
+}
+} catch(e) { console.log("Extract error:", e); }
+} catch(err) {
+setAiResp("Connection error. Check your network and try again.");
+}
+setAiLoading(false);
+}}>
+{aiLoading ? "✨ Analyzing..." : "✨ Analyze with AI"}
+</button>
+
+<textarea value={aiText} onChange={e => setAiText(e.target.value)}
+placeholder="Ask about your health data, get meal suggestions, workout guidance..."
+style={{ width: "100%", minHeight: 72, background: "rgba(255,255,255,0.04)", border: `1.5px solid ${S.border}`,
+borderRadius: 14, padding: 14, color: S.t1, fontSize: 15, fontFamily: "'Plus Jakarta Sans',sans-serif",
+resize: "vertical", outline: "none" }} />
+
+<div style={{ fontSize: 12, color: S.t3, marginTop: 8, textAlign: "center" }}>
+💡 Upload Garmin, WHOOP, BP, CPAP, Withings, or Oura screenshots — AI extracts your metrics automatically and saves to your dashboard.
+</div>
+</div>
+
+<div className="chips" style={{ marginTop: 12 }}>
+{["Analyze my Garmin stats", "Combine WHOOP + Garmin", "What should I eat?", "Workout recommendation", "Weekly summary"].map(q => (
+<div className="chip" key={q} onClick={() => setAiText(q)}>{q}</div>
+))}
+</div>
+
+{aiResp && !aiExtracted && <div className="ai-resp">{aiResp}</div>}
+
+{/* ── Review & Save Panel ── */}
+{aiExtracted && (
+<div style={{ marginTop: 14, background: "rgba(0,212,170,0.06)", border: `1.5px solid ${S.green}`, borderRadius: 16, padding: 18 }}>
+<div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+<div style={{ fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+<span>✅</span> Review Extracted Metrics
+</div>
+<button style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${S.border}`, background: "transparent", color: S.t3, fontSize: 12, cursor: "pointer" }}
+onClick={() => setAiExtracted(null)}>Dismiss</button>
+</div>
+
+<div className="sg" style={{ marginBottom: 14 }}>
+{[
+{ k: "weight", label: "Weight", unit: "lbs", setter: setWt },
+{ k: "body_fat", label: "Body Fat", unit: "%", setter: setBf },
+{ k: "muscle_mass", label: "Muscle", unit: "lbs", setter: setMm },
+{ k: "visceral_fat", label: "Visceral", unit: "", setter: setVf },
+{ k: "recovery", label: "Recovery", unit: "%", setter: setRec },
+{ k: "hrv", label: "HRV", unit: "ms", setter: setHrv },
+{ k: "strain", label: "Strain", unit: "", setter: setStrain },
+{ k: "sleep_hours", label: "Sleep", unit: "hrs", setter: setSlp },
+{ k: "ahi", label: "AHI", unit: "", setter: setAhi },
+{ k: "cpap_hours", label: "CPAP Hrs", unit: "", setter: setCpH },
+{ k: "cpap_mask", label: "Mask %", unit: "", setter: setCpM },
+{ k: "rhr", label: "RHR", unit: "bpm", setter: null },
+].filter(m => aiExtracted[m.k] !== undefined).map(m => (
+<div key={m.k} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${S.border}`, borderRadius: 12, padding: 10 }}>
+<div style={{ fontSize: 10, color: S.t2, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>{m.label}</div>
+<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 22, fontWeight: 800, color: S.green, marginTop: 2 }}>
+{aiExtracted[m.k]}<span style={{ fontSize: 12, color: S.t3, fontWeight: 500 }}> {m.unit}</span>
+</div>
+</div>
+))}
+</div>
+
+<div style={{ display: "flex", gap: 10 }}>
+<button className="btn btn-g" style={{ flex: 1 }} onClick={() => {
+const e = aiExtracted;
+if (e.weight) setWt(String(e.weight));
+if (e.body_fat) setBf(String(e.body_fat));
+if (e.muscle_mass) setMm(String(e.muscle_mass));
+if (e.visceral_fat) setVf(String(e.visceral_fat));
+if (e.recovery) setRec(String(e.recovery));
+if (e.hrv) setHrv(String(e.hrv));
+if (e.strain) setStrain(String(e.strain));
+if (e.sleep_hours) setSlp(String(e.sleep_hours));
+if (e.ahi) setAhi(String(e.ahi));
+if (e.cpap_hours) setCpH(String(e.cpap_hours));
+if (e.cpap_mask) setCpM(String(e.cpap_mask));
+setAiExtracted(null);
+show("✓ All metrics saved to dashboard");
+}}>✓ Save All to Dashboard</button>
+<button style={{ padding: "14px 20px", borderRadius: 14, border: `1.5px solid ${S.border}`, background: "transparent", color: S.t1, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+onClick={() => setAiExtracted(null)}>Skip</button>
+</div>
+
+{aiResp && (
+<div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${S.border}` }}>
+<div style={{ fontSize: 12, fontWeight: 700, color: S.t2, marginBottom: 6 }}>AI INSIGHTS</div>
+<div style={{ fontSize: 13, lineHeight: 1.6, color: S.t2, whiteSpace: "pre-wrap" }}>
+{aiResp.replace(/```json[\s\S]*?```\n*/g, "").trim()}
+</div>
+</div>
+)}
+</div>
+)}
+</div>
+)}
+
+{/* ══ MORE TAB ══ */}
+{tab === "more" && (
+<div className="content" style={{ paddingTop: 14 }}>
+<div className="card">
+<div className="card-title" style={{ marginBottom: 14 }}>📊 Stats & Settings</div>
+<div className="stat" style={{ marginBottom: 10 }}>
+<div className="stat-label">Weight Journey</div>
+<div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+<span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 28, color: S.t3, textDecoration: "line-through" }}>280</span>
+<span style={{ fontSize: 20, color: S.t3 }}>→</span>
+<span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 28, fontWeight: 800, color: S.green }}>{wt || "210"}</span>
+</div>
+<div style={{ fontSize: 13, color: S.green, fontWeight: 700, marginTop: 6 }}>↓ {(280 - (parseFloat(wt) || 210)).toFixed(1)} lbs lost</div>
+<div style={{ fontSize: 12, color: S.t3, marginTop: 4 }}>Next: 199 (Onederland!) 🎯</div>
+</div>
+<div className="stat" style={{ marginBottom: 10 }}>
+<div className="stat-label">Today's Nutrition</div>
+<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 14, color: S.t2, marginTop: 6 }}>
+{tCal} cal · {tPro}g protein · {tCarb}g carbs · {tFat}g fat
+</div>
+</div>
+<div className="stat">
+<div className="stat-label">Today's Training</div>
+<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 14, color: S.t2, marginTop: 6 }}>
+{tWoMin} min · {tWoCal} cal burned · {workouts.length} exercises
+</div>
+</div>
+</div>
+
+<div className="card">
+<div className="card-title" style={{ marginBottom: 14 }}>⚙️ Goals</div>
+<div style={{ fontSize: 13, color: S.t2, lineHeight: 2 }}>
+Daily Calories: <span style={{ color: S.t1, fontWeight: 700 }}>2,000</span><br />
+Daily Protein: <span style={{ color: S.t1, fontWeight: 700 }}>200g</span><br />
+Daily Carbs: <span style={{ color: S.t1, fontWeight: 700 }}>150g</span><br />
+Daily Fat: <span style={{ color: S.t1, fontWeight: 700 }}>65g</span><br />
+Target Weight: <span style={{ color: S.green, fontWeight: 700 }}>199 lbs</span><br />
+Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
+</div>
+</div>
+
+<div className="card">
+<div className="card-title" style={{ marginBottom: 14 }}>💾 Data Storage</div>
+<div style={{ fontSize: 13, color: S.t2, marginBottom: 12 }}>
+All data auto-saves and persists between sessions.
+</div>
+<button className="btn" style={{ background: "rgba(239,68,68,0.1)", color: S.red, border: `1.5px solid rgba(239,68,68,0.3)`, marginBottom: 8 }}
+onClick={async () => {
+if (confirm("Clear today's food log and workout log? (Metrics stay)")) {
+setFoods([]); setWkts([]);
+show("✓ Today's logs cleared");
+}
+}}>Clear Today's Food & Workout Log</button>
+<button className="btn" style={{ background: "rgba(239,68,68,0.05)", color: S.red, border: `1.5px solid rgba(239,68,68,0.15)` }}
+onClick={async () => {
+if (confirm("Reset ALL data including metrics, food log, workouts, and BP?") && confirm("This CANNOT be undone. Are you absolutely sure?")) {
+try { await window.storage.delete("vciq-data"); } catch(e) {}
+setFoods([]); setWkts([]); setBp([]);
+setWt("213.8"); setBf("39.4"); setMm("165.8"); setVf("8");
+setRec("75"); setHrv("25"); setSlp(""); setStrain("");
+setAhi(""); setCpH(""); setCpM("");
+show("✓ All data reset");
+}
+}}>Reset All Data</button>
+</div>
+</div>
+)}
+
+<div className="brain" onClick={() => setTab("ai")}>🧠</div>
+
+<div className="bnav">
+{[
+{ id: "home", icon: "🏠", label: "Home" },
+{ id: "food", icon: "🍽️", label: "Food" },
+{ id: "ai", icon: "✨", label: "" },
+{ id: "train", icon: "🏋️", label: "Train" },
+{ id: "more", icon: "📊", label: "More" },
+].map(n => (
+<div key={n.id} className={`bnav-item ${tab === n.id ? "on" : ""}`} onClick={() => setTab(n.id)}>
+<div className="bnav-icon" style={n.id === "ai" ? { fontSize: 30, marginTop: -16, width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg,${S.green},${S.cyan})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(0,212,170,0.3)" } : {}}>{n.icon}</div>
+<div className="bnav-label">{n.label}</div>
+</div>
+))}
+</div>
+
+{toast && <div className="toast">{toast}</div>}
+{renderModal()}
+</div>
+</>
+);
+}
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
