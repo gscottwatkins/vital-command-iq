@@ -8,7 +8,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="VitalCommand IQ">
 <meta name="theme-color" content="#0b1120">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230b1120'/><polyline points='10,50 25,50 35,50 45,20 55,80 65,35 75,65 82,50 90,50' fill='none' stroke='%2300e5c7' stroke-width='6' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='36' fill='%230b1120'/><polyline points='18,90 45,90 63,90 81,36 99,144 117,63 135,117 148,90 162,90' fill='none' stroke='%2300e5c7' stroke-width='10' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <style>
   html, body, #root { margin:0; padding:0; min-height:100dvh; background:#0b1120; }
 </style>
@@ -20,7 +21,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
-
 
 
 /*
@@ -307,6 +307,11 @@ const [caloriesBurned, setCaloriesBurned] = useState("");
 const [syncing, setSyncing] = useState(false);
 const [lastSync, setLastSync] = useState(null);
 
+// Steps, physio age, target weight
+const [steps, setSteps] = useState("");
+const [physioAge, setPhysioAge] = useState("");
+const [targetWeight, setTargetWeight] = useState("199");
+
 const show = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2200); }, []);
 
 // Macro totals
@@ -364,6 +369,9 @@ if (d.rhr) setRhr(d.rhr); if (d.spo2) setSpo2(d.spo2);
 if (d.avgHr) setAvgHr(d.avgHr); if (d.maxHr) setMaxHr(d.maxHr);
 if (d.sleepHours) setSleepHours(d.sleepHours);
 if (d.caloriesBurned) setCaloriesBurned(d.caloriesBurned);
+if (d.steps) setSteps(d.steps);
+if (d.physioAge) setPhysioAge(d.physioAge);
+if (d.targetWeight) setTargetWeight(d.targetWeight);
 setWhoopStatus("saved"); setWithingsStatus("saved");
 }
 } catch(e) { console.log("Storage load:", e); }
@@ -428,6 +436,19 @@ if (!storageReady) return;
 syncData(false);
 }, [storageReady, syncData]);
 
+// Auto-refresh: on tab focus + every 15 min
+useEffect(() => {
+if (!storageReady) return;
+const handleFocus = () => { syncData(false); };
+document.addEventListener("visibilitychange", () => { if (!document.hidden) handleFocus(); });
+window.addEventListener("focus", handleFocus);
+const interval = setInterval(() => { syncData(false); }, 15 * 60 * 1000);
+return () => {
+window.removeEventListener("focus", handleFocus);
+clearInterval(interval);
+};
+}, [storageReady, syncData]);
+
 
 // ── Persistent Storage — Auto-save on data change ──
 const saveTimer = useRef(null);
@@ -441,11 +462,12 @@ wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM,
 bp, foods, workouts, savedAt: new Date().toISOString(),
 goalCal, goalPro, goalCarb, goalFat, fitnessGoal,
 rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned,
+steps, physioAge, targetWeight,
 }));
 } catch(e) { console.log("Storage save:", e); }
 }, 1500);
 return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-}, [wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM, bp, foods, workouts, storageReady, goalCal, goalPro, goalCarb, goalFat, fitnessGoal, rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned]);
+}, [wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM, bp, foods, workouts, storageReady, goalCal, goalPro, goalCarb, goalFat, fitnessGoal, rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned, steps, physioAge, targetWeight]);
 
 const wIcon = (c) => c <= 1 ? "☀️" : c <= 3 ? "⛅" : c <= 48 ? "☁️" : c <= 67 ? "🌧️" : c <= 82 ? "🌦️" : "⛈️";
 
@@ -457,6 +479,66 @@ return { l: "Stage 2", c: S.red };
 };
 
 const recColor = (v) => +v >= 67 ? S.green : +v >= 34 ? S.orange : S.red;
+
+// ── Markdown to HTML parser for AI Coach responses ──
+const parseCoachMarkdown = (text) => {
+  if (!text) return "";
+  // Remove JSON blocks
+  let clean = text.replace(/```json[\s\S]*?```\n*/g, "").trim();
+  // Remove standalone triple backticks
+  clean = clean.replace(/```\n?/g, "");
+  // Bold: **text**
+  clean = clean.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Italic: *text*
+  clean = clean.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+  // Section headers that start with emoji + text or numbered emoji
+  clean = clean.replace(/^([\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]\uFE0F?)\s*(.+)$/gmu, '<div style="margin-top:16px;margin-bottom:6px;font-size:15px;font-weight:800;color:#e2e8f0">$1 $2</div>');
+  // Numbered headers like "1️⃣ Bold text" or "**1. Header**"
+  // Lines starting with - bullet
+  clean = clean.replace(/^[-–]\s+(.+)$/gm, '<div style="padding-left:12px;margin:4px 0;position:relative"><span style="position:absolute;left:0;color:rgba(0,212,170,0.6)">•</span>$1</div>');
+  // Paragraphs: double newline
+  clean = clean.replace(/\n\n+/g, '</p><p style="margin:10px 0;line-height:1.65">');
+  // Single newlines
+  clean = clean.replace(/\n/g, '<br/>');
+  return '<p style="margin:0;line-height:1.65">' + clean + '</p>';
+};
+
+// ── Coach Card Component ──
+const CoachCard = ({ text, onDismiss, title = "AI Coach", icon = "✨" }) => {
+  if (!text) return null;
+  const cleanText = text.replace(/```json[\s\S]*?```\n*/g, "").trim();
+  if (!cleanText) return null;
+  return React.createElement("div", {
+    style: {
+      marginTop: 14, background: "linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.98))",
+      border: "1.5px solid rgba(0,212,170,0.25)", borderRadius: 18, padding: 0, overflow: "hidden",
+      boxShadow: "0 4px 24px rgba(0,0,0,0.3)"
+    }
+  },
+    // Header bar
+    React.createElement("div", {
+      style: {
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)",
+        background: "rgba(0,212,170,0.06)"
+      }
+    },
+      React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
+        React.createElement("span", { style: { fontSize: 18 } }, icon),
+        React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: S.green, letterSpacing: 1, textTransform: "uppercase" } }, title)
+      ),
+      onDismiss && React.createElement("button", {
+        style: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: S.t3, fontSize: 13, padding: "4px 10px", cursor: "pointer" },
+        onClick: onDismiss
+      }, "✕")
+    ),
+    // Body
+    React.createElement("div", {
+      style: { padding: "16px 18px", fontSize: 14, color: "#e2e8f0" },
+      dangerouslySetInnerHTML: { __html: parseCoachMarkdown(cleanText) }
+    })
+  );
+};
 
 const hr = new Date().getHours();
 const greet = hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : "Good evening";
@@ -615,8 +697,44 @@ input[type=number] { -moz-appearance:textfield; }
 .app { max-width:500px; margin:0 auto; min-height:100dvh; position:relative; padding-bottom:80px; }
 .hdr { padding:14px 20px; background:rgba(11,17,32,0.92); backdrop-filter:blur(16px); border-bottom:1px solid ${S.border}; position:sticky; top:0; z-index:50; }
 .hdr-row { display:flex; align-items:center; justify-content:space-between; }
-.logo { font-family:'JetBrains Mono',monospace; font-weight:800; font-size:20px; }
-.logo b { color:${S.green}; }
+
+/* ── Responsive Logo System ── */
+.vc-logo { display:flex; align-items:center; gap:0; user-select:none; }
+.vc-vital { font-family:'Segoe UI',system-ui,sans-serif; font-weight:700; color:#00e5c7; letter-spacing:1px; line-height:1; }
+.vc-command { font-family:'Segoe UI',system-ui,sans-serif; font-weight:700; color:#ffffff; letter-spacing:1px; line-height:1; }
+.vc-iq { font-family:'Segoe UI',system-ui,sans-serif; font-weight:300; color:#ffffff; letter-spacing:2px; line-height:1; opacity:0.9; }
+.hb-svg { overflow:visible; }
+.hb-glow { fill:none; stroke:url(#hbGrad); stroke-width:5; stroke-linecap:round; stroke-linejoin:round; opacity:0.25; filter:blur(3px); }
+.hb-trace { fill:none; stroke:url(#hbGrad); stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:200; stroke-dashoffset:200; animation:drawHB 1.5s ease-out forwards; filter:drop-shadow(0 0 6px rgba(0,229,199,0.6)); }
+@keyframes drawHB { to { stroke-dashoffset:0; } }
+.hb-dot { fill:#ff69b4; animation:pDot 2.5s ease-in-out infinite; }
+@keyframes pDot { 0%,100%{opacity:0.6;r:2;} 50%{opacity:1;r:3;} }
+
+/* Phone (default — under 480px) */
+.vc-vital,.vc-command,.vc-iq { font-size:18px; }
+.hb-svg { height:22px; width:55px; margin:0 2px; }
+
+/* Large phone (480px+) */
+@media(min-width:480px) {
+.vc-vital,.vc-command,.vc-iq { font-size:22px; }
+.hb-svg { height:26px; width:70px; margin:0 3px; }
+}
+
+/* Tablet (768px+) */
+@media(min-width:768px) {
+.vc-vital,.vc-command,.vc-iq { font-size:28px; }
+.hb-svg { height:32px; width:90px; margin:0 4px; }
+}
+
+/* Desktop / Laptop (1024px+) */
+@media(min-width:1024px) {
+.vc-vital,.vc-command,.vc-iq { font-size:36px; }
+.hb-svg { height:40px; width:110px; margin:0 5px; }
+}
+
+.hdr-icon { width:36px; height:36px; border-radius:50%; background:rgba(0,229,199,0.08); border:1px solid rgba(0,229,199,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+@media(min-width:768px) { .hdr-icon { width:44px; height:44px; } }
+@media(min-width:1024px) { .hdr-icon { width:48px; height:48px; } }
 .date { font-size:12px; color:${S.t2}; margin-top:2px; }
 .av { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,${S.cyan},${S.green}); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; }
 
@@ -942,12 +1060,28 @@ return (
 <style>{css}</style>
 <div className="app">
 <div className="hdr">
+{/* SVG gradient defs — shared */}
+<svg width="0" height="0" style={{ position: "absolute" }}><defs>
+<linearGradient id="hbGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#00e5c7"/><stop offset="50%" stopColor="#00d4ff"/><stop offset="100%" stopColor="#00e5c7"/></linearGradient>
+</defs></svg>
 <div className="hdr-row">
 <div>
-<div className="logo">Vital<b>Command</b> IQ</div>
+<div className="vc-logo">
+<span className="vc-vital">Vital</span><span className="vc-command">Command</span>
+<svg className="hb-svg" viewBox="0 0 90 32" preserveAspectRatio="xMidYMid meet">
+<polyline className="hb-glow" points="0,16 12,16 20,16 28,4 36,28 44,10 52,22 58,16 70,16 90,16"/>
+<polyline className="hb-trace" points="0,16 12,16 20,16 28,4 36,28 44,10 52,22 58,16 70,16 90,16"/>
+<circle className="hb-dot" cx="44" cy="10" r="2"/>
+</svg>
+<span className="vc-iq">IQ</span>
+</div>
 <div className="date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</div>
 </div>
-<img src="data:image/png;base64,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" style={{ width: 40, height: 40, borderRadius: "50%" }} alt="VC" />
+<div className="hdr-icon">
+<svg viewBox="0 0 40 40" fill="none" style={{ width: "60%", height: "60%" }}>
+<polyline stroke="#00e5c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points="4,20 10,20 14,20 18,8 22,32 26,14 30,24 34,20 38,20" style={{ filter: "drop-shadow(0 0 4px rgba(0,229,199,0.5))" }}/>
+</svg>
+</div>
 </div>
 </div>
 
@@ -1031,6 +1165,27 @@ onClick={() => setPlanOpen(p => !p)}>
 </div>
 
 <div className="sec">Today's Snapshot</div>
+
+{/* Today's Activity Card */}
+<div className="card" style={{ borderLeft: `3px solid ${S.cyan}` }}>
+<div className="card-hdr">
+<div className="card-title"><span style={{ fontSize: 20 }}>🏃</span> Today's Activity</div>
+{physioAge && <div className="card-badge" style={{ background: "rgba(6,182,212,0.12)", color: S.cyan }}>Bio Age: {physioAge}</div>}
+</div>
+<div className="sg" style={{ padding: 0 }}>
+<div className="stat"><div className="stat-label">Steps</div><div className="stat-val">{steps ? parseInt(steps).toLocaleString() : "--"}</div></div>
+<div className="stat"><div className="stat-label">Cardio</div><div className="stat-val">{workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.mins, 0) || "--"}<span className="stat-unit"> min</span></div></div>
+<div className="stat"><div className="stat-label">Strength</div><div className="stat-val">{workouts.filter(w => w.type === "strength").length || "--"}<span className="stat-unit"> exs</span></div></div>
+<div className="stat"><div className="stat-label">Calories</div><div className="stat-val">{(tWoCal + (parseInt(caloriesBurned) || 0)) || "--"}<span className="stat-unit"> cal</span></div></div>
+</div>
+{workouts.filter(w => w.type === "strength" && w.sets && w.sets.length > 0).length > 0 && (
+<div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${S.border}`, display: "flex", gap: 16, flexWrap: "wrap" }}>
+<div style={{ fontSize: 12, color: S.t2 }}>Volume: <span style={{ color: S.purple, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{workouts.filter(w => w.sets).reduce((s, w) => s + w.sets.reduce((ss, set) => ss + (set.reps * set.wt), 0), 0).toLocaleString()} lbs</span></div>
+<div style={{ fontSize: 12, color: S.t2 }}>Sets: <span style={{ color: S.cyan, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{workouts.filter(w => w.sets).reduce((s, w) => s + w.sets.length, 0)}</span></div>
+<div style={{ fontSize: 12, color: S.t2 }}>Exercises: <span style={{ color: S.green, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{workouts.filter(w => w.type === "strength").length}</span></div>
+</div>
+)}
+</div>
 
 <div className="card" style={{ borderLeft: `3px solid ${S.blue}` }}>
 <div className="card-hdr">
@@ -1246,7 +1401,28 @@ onClick={() => setModal("ai_workout")}>
 <div className="stat-label">Exercises</div>
 <div className="stat-val">{workouts.length}</div>
 </div>
+<div className="card card-sm" style={{ margin: 0 }}>
+<div className="stat-label">Steps</div>
+<div className="stat-val">{steps ? parseInt(steps).toLocaleString() : "--"}</div>
 </div>
+</div>
+
+{/* Activity breakdown */}
+{workouts.length > 0 && (
+<div className="card card-sm" style={{ marginBottom: 14 }}>
+<div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+{workouts.filter(w => w.type === "cardio").length > 0 && (
+<div style={{ fontSize: 12, color: S.t2 }}>🚴 Cardio: <span style={{ color: S.cyan, fontWeight: 700 }}>{workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.mins, 0)} min / {workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.cal, 0)} cal</span></div>
+)}
+{workouts.filter(w => w.type === "strength").length > 0 && (
+<div style={{ fontSize: 12, color: S.t2 }}>🏋️ Strength: <span style={{ color: S.purple, fontWeight: 700 }}>{workouts.filter(w => w.type === "strength").length} exs / {workouts.filter(w => w.sets).reduce((s, w) => s + w.sets.reduce((ss, set) => ss + (set.reps * set.wt), 0), 0).toLocaleString()} lbs vol</span></div>
+)}
+{workouts.filter(w => w.type === "recovery").length > 0 && (
+<div style={{ fontSize: 12, color: S.t2 }}>🧘 Recovery: <span style={{ color: S.green, fontWeight: 700 }}>{workouts.filter(w => w.type === "recovery").reduce((s, w) => s + w.mins, 0)} min</span></div>
+)}
+</div>
+</div>
+)}
 
 {/* AI Workout Recap Button */}
 {workouts.length > 0 && (
@@ -1289,15 +1465,7 @@ setWktSummaryLoading(false);
 )}
 
 {/* AI Summary Display */}
-{wktSummary && (
-<div style={{ background: "rgba(0,212,170,0.06)", border: "1.5px solid " + S.green, borderRadius: 14, padding: 16, marginBottom: 14 }}>
-<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-<div style={{ fontSize: 13, fontWeight: 800, color: S.green, letterSpacing: 1 }}>\u2728 WORKOUT RECAP</div>
-<button style={{ background: "none", border: "none", color: S.t3, fontSize: 16, cursor: "pointer" }} onClick={() => setWktSummary(null)}>x</button>
-</div>
-<div style={{ fontSize: 13, lineHeight: 1.7, color: S.t1, whiteSpace: "pre-wrap" }}>{wktSummary}</div>
-</div>
-)}
+{wktSummary && React.createElement(CoachCard, { text: wktSummary, onDismiss: () => setWktSummary(null), title: "Workout Recap", icon: "\ud83c\udfc6" })}
 
 {/* Completed Exercises */}
 {workouts.length > 0 && (
@@ -1508,7 +1676,14 @@ CRITICAL: When analyzing device screenshots, ALWAYS start your response with a J
   "bp_diastolic": number,
   "bp_pulse": number,
   "avg_hr": number,
-  "max_hr": number
+  "max_hr": number,
+  "steps": number,
+  "physio_age": number (physiological/fitness age from WHOOP or Garmin),
+  "activity_name": string (e.g. "Walking", "Running", "Cycling", "Elliptical"),
+  "activity_type": string ("cardio" or "strength" or "recovery"),
+  "activity_duration_min": number (minutes),
+  "activity_distance_miles": number (miles if available),
+  "activity_calories": number (calories burned during activity)
 }
 
 IMPORTANT MERGE RULE: When both WHOOP and Garmin data exist, COMBINE them intelligently:
@@ -1518,7 +1693,14 @@ IMPORTANT MERGE RULE: When both WHOOP and Garmin data exist, COMBINE them intell
 - NEVER override existing WHOOP data with Garmin equivalents — MERGE them
 - Note the source of each metric in your insights
 
-After the JSON block, provide brief actionable insights. Be concise and direct.`,
+After the JSON block, provide a coaching-style analysis. Format your response like a personal coach talking to Scott:
+- Start with a brief greeting that references the specific activity and key metric (e.g. "Great 4.2-mile walk with solid Zone 2 execution!")
+- Use numbered sections with bold headers for Key Insights (2-3 points)
+- End with 2-3 specific Recommendations
+- Reference actual numbers inline with context (e.g. "your avg HR of 115 bpm sits perfectly in Zone 2")
+- Keep it conversational, direct, and under 250 words
+- Do NOT show raw JSON or code blocks in the coaching text
+- Use **bold** for emphasis on key metrics and headers`,
 messages: [{ role: "user", content: userContent }],
 }),
 });
@@ -1532,6 +1714,19 @@ const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
 if (jsonMatch) {
 const extracted = JSON.parse(jsonMatch[1]);
 setAiExtracted(extracted);
+// Auto-add activity to workouts if extracted
+if (extracted.activity_name && extracted.activity_duration_min) {
+  const actName = extracted.activity_name;
+  const actMins = Math.round(parseFloat(extracted.activity_duration_min));
+  const actType = extracted.activity_type || "cardio";
+  const actCal = extracted.activity_calories || extracted.calories_burned || Math.round(actMins * 5);
+  // Check if already logged to avoid duplicates
+  const alreadyLogged = workouts.some(w => w.name === actName && w.mins === actMins);
+  if (!alreadyLogged) {
+    setWkts(p => [...p, { name: actName, mins: actMins, cal: Math.round(parseFloat(actCal)), type: actType }]);
+    show(`✓ ${actName} (${actMins} min) added to workouts`);
+  }
+}
 show("✓ Metrics extracted — review below");
 } else {
 // Fallback regex extraction
@@ -1551,6 +1746,9 @@ tryEx(/sleep\s*(?:hours?|duration)[:\s]*(\d+\.?\d*)/i, "sleep_hours");
 tryEx(/sleep\s*(?:score|quality)[:\s]*(\d+)/i, "sleep_score");
 tryEx(/(?:resting\s*)?(?:heart\s*rate|rhr|pulse)[:\s]*(\d+)/i, "rhr");
 tryEx(/steps[:\s]*(\d[\d,]*)/i, "steps");
+tryEx(/(?:physio|physiological|fitness|biological)\s*(?:age|yr)[:\s]*(\d+)/i, "physio_age");
+tryEx(/(?:avg|average)\s*(?:heart\s*rate|hr)[:\s]*(\d+)/i, "avg_hr");
+tryEx(/(?:max|maximum)\s*(?:heart\s*rate|hr)[:\s]*(\d+)/i, "max_hr");
 if (Object.keys(ex).length > 0) {
 setAiExtracted(ex);
 show("✓ Metrics found — review below");
@@ -1591,7 +1789,7 @@ setAiLoading(false);
 ))}
 </div>
 
-{aiResp && !aiExtracted && <div className="ai-resp">{aiResp}</div>}
+{aiResp && !aiExtracted && React.createElement(CoachCard, { text: aiResp, onDismiss: () => setAiResp(""), title: "AI Coach", icon: "✨" })}
 
 {/* ── Review & Save Panel ── */}
 {aiExtracted && (
@@ -1618,6 +1816,14 @@ onClick={() => setAiExtracted(null)}>Dismiss</button>
 { k: "cpap_hours", label: "CPAP Hrs", unit: "", setter: setCpH },
 { k: "cpap_mask", label: "Mask %", unit: "", setter: setCpM },
 { k: "rhr", label: "RHR", unit: "bpm", setter: null },
+{ k: "steps", label: "Steps", unit: "", setter: setSteps },
+{ k: "physio_age", label: "Bio Age", unit: "yrs", setter: setPhysioAge },
+{ k: "avg_hr", label: "Avg HR", unit: "bpm", setter: setAvgHr },
+{ k: "max_hr", label: "Max HR", unit: "bpm", setter: setMaxHr },
+{ k: "calories_burned", label: "Calories", unit: "cal", setter: setCaloriesBurned },
+{ k: "activity_name", label: "Activity", unit: "", setter: null },
+{ k: "activity_duration_min", label: "Duration", unit: "min", setter: null },
+{ k: "activity_distance_miles", label: "Distance", unit: "mi", setter: null },
 ].filter(m => aiExtracted[m.k] !== undefined).map(m => (
 <div key={m.k} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${S.border}`, borderRadius: 12, padding: 10 }}>
 <div style={{ fontSize: 10, color: S.t2, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>{m.label}</div>
@@ -1642,6 +1848,11 @@ if (e.sleep_hours) setSlp(String(e.sleep_hours));
 if (e.ahi) setAhi(String(e.ahi));
 if (e.cpap_hours) setCpH(String(e.cpap_hours));
 if (e.cpap_mask) setCpM(String(e.cpap_mask));
+if (e.steps) setSteps(String(e.steps));
+if (e.physio_age) setPhysioAge(String(e.physio_age));
+if (e.avg_hr) setAvgHr(String(e.avg_hr));
+if (e.max_hr) setMaxHr(String(e.max_hr));
+if (e.calories_burned) setCaloriesBurned(String(e.calories_burned));
 setAiExtracted(null);
 show("✓ All metrics saved to dashboard");
 }}>✓ Save All to Dashboard</button>
@@ -1649,14 +1860,7 @@ show("✓ All metrics saved to dashboard");
 onClick={() => setAiExtracted(null)}>Skip</button>
 </div>
 
-{aiResp && (
-<div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${S.border}` }}>
-<div style={{ fontSize: 12, fontWeight: 700, color: S.t2, marginBottom: 6 }}>AI INSIGHTS</div>
-<div style={{ fontSize: 13, lineHeight: 1.6, color: S.t2, whiteSpace: "pre-wrap" }}>
-{aiResp.replace(/```json[\s\S]*?```\n*/g, "").trim()}
-</div>
-</div>
-)}
+{aiResp && React.createElement(CoachCard, { text: aiResp, title: "AI Analysis", icon: "🔬" })}
 </div>
 )}
 </div>
@@ -1675,7 +1879,7 @@ onClick={() => setAiExtracted(null)}>Skip</button>
 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 28, fontWeight: 800, color: S.green }}>{wt || "210"}</span>
 </div>
 <div style={{ fontSize: 13, color: S.green, fontWeight: 700, marginTop: 6 }}>↓ {(280 - (parseFloat(wt) || 210)).toFixed(1)} lbs lost</div>
-<div style={{ fontSize: 12, color: S.t3, marginTop: 4 }}>Next: 199 (Onederland!) 🎯</div>
+<div style={{ fontSize: 12, color: S.t3, marginTop: 4 }}>Next: {targetWeight} {parseInt(targetWeight) < 200 ? "(Onederland!) " : ""}🎯</div>
 </div>
 <div className="stat" style={{ marginBottom: 10 }}>
 <div className="stat-label">Today's Nutrition</div>
@@ -1699,7 +1903,7 @@ Daily Protein: <span style={{ color: S.t1, fontWeight: 700 }}>{goalPro}g</span><
 Daily Carbs: <span style={{ color: S.t1, fontWeight: 700 }}>{goalCarb}g</span><br />
 Daily Fat: <span style={{ color: S.t1, fontWeight: 700 }}>{goalFat}g</span><br />
 Fitness Goal: <span style={{ color: S.purple, fontWeight: 700 }}>{fitnessGoal === "weight_loss" ? "🔥 Fat Loss" : fitnessGoal === "muscle_build" ? "💪 Muscle Build" : fitnessGoal === "weight_loss_muscle" ? "⚡ Fat Loss + Muscle" : "🎯 Maintenance"}</span><br />
-Target Weight: <span style={{ color: S.green, fontWeight: 700 }}>199 lbs</span><br />
+Target Weight: <span style={{ color: S.green, fontWeight: 700 }}>{targetWeight} lbs</span><br />
 Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
 </div>
 <button className="btn" style={{ marginTop: 12, background: "rgba(168,85,247,0.1)", color: S.purple, border: `1.5px solid rgba(168,85,247,0.3)` }} onClick={() => setModal("goals")}>Edit Goals</button>
@@ -1781,6 +1985,7 @@ else { setGoalCal("2200"); setGoalPro("180"); setGoalCarb("180"); setGoalFat("70
 <div><div className="inp-label">Protein (g)</div><input className="inp" type="number" value={goalPro} onChange={e => setGoalPro(e.target.value)} inputMode="numeric" /></div>
 <div><div className="inp-label">Carbs (g)</div><input className="inp" type="number" value={goalCarb} onChange={e => setGoalCarb(e.target.value)} inputMode="numeric" /></div>
 <div><div className="inp-label">Fat (g)</div><input className="inp" type="number" value={goalFat} onChange={e => setGoalFat(e.target.value)} inputMode="numeric" /></div>
+<div><div className="inp-label">Target Wt (lbs)</div><input className="inp" type="number" value={targetWeight} onChange={e => setTargetWeight(e.target.value)} inputMode="numeric" /></div>
 </div>
 <button className="btn btn-g" onClick={() => { show("✓ Goals saved"); setGoalModal(false); }}>Save Goals</button>
 </div>
