@@ -23,8 +23,6 @@ const { useState, useEffect, useRef, useCallback } = React;
 
 
 
-
-
 /*
 ═══════════════════════════════════════════════════════════════════
 VITALCOMMAND IQ v2 — Mobile-Optimized Health Intelligence
@@ -343,6 +341,43 @@ setStorageReady(true);
 };
 loadAll();
 }, []);
+
+// ── Auto-fetch WHOOP + Withings on mount ──
+useEffect(() => {
+if (!storageReady) return;
+const PROXY = "https://zestful-education-production-88e7.up.railway.app";
+// Fetch WHOOP data
+(async () => {
+try {
+const res = await fetch(PROXY + "/whoop/all");
+const d = await res.json();
+if (d.connected) {
+if (d.recovery != null) setRec(String(d.recovery));
+if (d.hrv != null) setHrv(String(d.hrv));
+if (d.strain != null) setStrain(String(d.strain));
+if (d.sleep_hours != null) setSlp(String(d.sleep_hours));
+setWhoopStatus("saved");
+console.log("[WHOOP] Auto-loaded:", d);
+}
+} catch(e) { console.log("[WHOOP] fetch error:", e.message); }
+})();
+// Fetch Withings data
+(async () => {
+try {
+const res = await fetch(PROXY + "/withings/body");
+const d = await res.json();
+if (d.connected) {
+if (d.weight != null) setWt(String(d.weight));
+if (d.body_fat != null) setBf(String(d.body_fat));
+if (d.muscle_mass != null) setMm(String(d.muscle_mass));
+if (d.visceral_fat != null) setVf(String(d.visceral_fat));
+setWithingsStatus("saved");
+console.log("[Withings] Auto-loaded:", d);
+}
+} catch(e) { console.log("[Withings] fetch error:", e.message); }
+})();
+}, [storageReady]);
+
 
 // ── Persistent Storage — Auto-save on data change ──
 const saveTimer = useRef(null);
@@ -784,7 +819,7 @@ return (
 <div className="logo">Vital<b>Command</b> IQ</div>
 <div className="date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</div>
 </div>
-<div className="av">SW</div>
+<img src="data:image/png;base64,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" style={{ width: 40, height: 40, borderRadius: "50%" }} alt="VC" />
 </div>
 </div>
 
@@ -839,7 +874,7 @@ return (
 onClick={() => setPlanOpen(p => !p)}>
 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
 <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-<span style={{ fontSize: 16 }}>🧠</span>
+<span style={{ fontSize: 16 }}>📋</span>
 <div style={{ fontSize: 14, fontWeight: 700, color: tip.color, flex: 1 }}>{headline}</div>
 </div>
 <span style={{ fontSize: 14, color: S.t3, transform: planOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>▸</span>
@@ -1386,7 +1421,16 @@ resize: "vertical", outline: "none" }} />
 
 <div className="chips" style={{ marginTop: 12 }}>
 {["Analyze my Garmin stats", "Combine WHOOP + Garmin", "What should I eat?", "Workout recommendation", "Weekly summary"].map(q => (
-<div className="chip" key={q} onClick={() => setAiText(q)}>{q}</div>
+<div className="chip" key={q} onClick={async () => { 
+setAiText(q); setAiLoading(true); setAiResp('');
+try {
+const ctx = { weight: wt, bodyFat: bf, muscle: mm, visceral: vf, recovery: rec, hrv, sleep: slp, strain, cpap: { ahi, hours: cpH, mask: cpM }, bp: bp.slice(0,3), nutrition: { cal: tCal, protein: tPro, carbs: tCarb, fat: tFat, items: foods.length }, workouts: workouts.map(w => w.name+' '+w.mins+'m') };
+const res = await fetch('https://zestful-education-production-88e7.up.railway.app/ai/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ system: 'You are VitalCommand AI coach for Scott Watkins (58, '+(wt||213)+' lbs, 165+ lbs muscle). Answer concisely using his health data. Under 200 words.', messages: [{ role: 'user', content: 'Health: '+JSON.stringify(ctx)+'\nQuestion: '+q }] }) });
+const data = await res.json();
+setAiResp(data.content ? data.content.map(c => c.text || '').join('') : 'No response');
+} catch(e) { setAiResp('Connection error. Try again.'); }
+setAiLoading(false);
+}}>{q}</div>
 ))}
 </div>
 
@@ -1529,7 +1573,7 @@ show("✓ All data reset");
 </div>
 )}
 
-<div className="brain" onClick={() => setTab("ai")}>🧠</div>
+<div className="brain" onClick={() => setTab("ai")}>📋</div>
 
 <div className="bnav">
 {[
