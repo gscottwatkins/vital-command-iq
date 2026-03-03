@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-vc-bg text-white font-sans;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Atmospheric background */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(6,214,160,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Hide scrollbars on horizontal scrollers */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { scrollbar-width: none; }
+
+/* Input focus ring */
+input:focus, select:focus, textarea:focus {
+  @apply outline-none ring-2 ring-vc-cyan/30 border-vc-cyan/50;
+}
+
+/* Progress bar animation */
+.progress-fill {
+  transition: width 1s ease-out;
+}
+
+/* Card accent line */
+.card-accent {
+  @apply absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl;
+}
