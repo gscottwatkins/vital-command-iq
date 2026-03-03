@@ -312,6 +312,30 @@ const [steps, setSteps] = useState("");
 const [physioAge, setPhysioAge] = useState("");
 const [targetWeight, setTargetWeight] = useState("199");
 
+// IQ Coach slide-up panel
+const [coachOpen, setCoachOpen] = useState(false);
+const [coachResp, setCoachResp] = useState("");
+const [coachLoading, setCoachLoading] = useState(false);
+
+// Medications
+const [meds, setMeds] = useState([
+  { name: "Zepbound", dose: "2.5mg", freq: "weekly", day: "Sunday", time: "08:00", type: "injection", notes: "GLP-1 receptor agonist for weight management. May cause nausea, decreased appetite, fatigue. Avoid heavy training day of injection." },
+  { name: "Testosterone Cypionate", dose: "200mg", freq: "weekly", day: "Wednesday", time: "09:00", type: "injection", notes: "TRT for hormone optimization. Peaks 24-48hrs post-injection. Best to train heavy 1-2 days after injection." },
+  { name: "Vitamin C Injection", dose: "1000mg", freq: "weekly", day: "Monday", time: "10:00", type: "injection", notes: "Immune support, collagen synthesis, antioxidant. Supports recovery from intense training." },
+]);
+const [medModal, setMedModal] = useState(false);
+
+// Health Profile
+const [userProfile, setUserProfile] = useState({
+  sex: "male", age: "58", height: "5'10\"",
+  conditions: ["sleep apnea"],
+  allergies: "",
+});
+
+// Bloodwork
+const [bloodwork, setBW] = useState([]);
+const [bwExpanded, setBwExpanded] = useState(false);
+
 const show = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2200); }, []);
 
 // Macro totals
@@ -348,9 +372,18 @@ temp: Math.round(d.hourly.temperature_2m[i]), code: d.hourly.weather_code[i],
 useEffect(() => {
 const loadAll = async () => {
 try {
-const r = await window.storage.get("vciq-data");
-if (r && r.value) {
-const d = JSON.parse(r.value);
+let d = null;
+// Try localStorage first (works on deployed site)
+const lsData = localStorage.getItem("vciq-data");
+if (lsData) { d = JSON.parse(lsData); }
+// Fallback: try window.storage (Claude artifacts)
+if (!d && window.storage) {
+  try {
+    const r = await window.storage.get("vciq-data");
+    if (r && r.value) d = JSON.parse(r.value);
+  } catch(e) {}
+}
+if (d) {
 if (d.wt) setWt(d.wt); if (d.bf) setBf(d.bf);
 if (d.mm) setMm(d.mm); if (d.vf) setVf(d.vf);
 if (d.rec) setRec(d.rec); if (d.hrv) setHrv(d.hrv);
@@ -372,6 +405,9 @@ if (d.caloriesBurned) setCaloriesBurned(d.caloriesBurned);
 if (d.steps) setSteps(d.steps);
 if (d.physioAge) setPhysioAge(d.physioAge);
 if (d.targetWeight) setTargetWeight(d.targetWeight);
+if (d.meds) setMeds(d.meds);
+if (d.userProfile) setUserProfile(d.userProfile);
+if (d.bloodwork) setBW(d.bloodwork);
 setWhoopStatus("saved"); setWithingsStatus("saved");
 }
 } catch(e) { console.log("Storage load:", e); }
@@ -457,17 +493,22 @@ if (!storageReady) return;
 if (saveTimer.current) clearTimeout(saveTimer.current);
 saveTimer.current = setTimeout(async () => {
 try {
-await window.storage.set("vciq-data", JSON.stringify({
+const savePayload = JSON.stringify({
 wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM,
 bp, foods, workouts, savedAt: new Date().toISOString(),
 goalCal, goalPro, goalCarb, goalFat, fitnessGoal,
 rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned,
 steps, physioAge, targetWeight,
-}));
+meds, userProfile, bloodwork,
+});
+// Save to localStorage (works on deployed site)
+localStorage.setItem("vciq-data", savePayload);
+// Also try window.storage (Claude artifacts)
+if (window.storage) { try { await window.storage.set("vciq-data", savePayload); } catch(e) {} }
 } catch(e) { console.log("Storage save:", e); }
 }, 1500);
 return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-}, [wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM, bp, foods, workouts, storageReady, goalCal, goalPro, goalCarb, goalFat, fitnessGoal, rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned, steps, physioAge, targetWeight]);
+}, [wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM, bp, foods, workouts, storageReady, goalCal, goalPro, goalCarb, goalFat, fitnessGoal, rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned, steps, physioAge, targetWeight, meds, userProfile, bloodwork]);
 
 const wIcon = (c) => c <= 1 ? "☀️" : c <= 3 ? "⛅" : c <= 48 ? "☁️" : c <= 67 ? "🌧️" : c <= 82 ? "🌦️" : "⛈️";
 
@@ -770,6 +811,29 @@ input[type=number] { -moz-appearance:textfield; }
 
 .brain { position:fixed; bottom:86px; right:max(calc(50% - 230px), 16px); width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,${S.green},${S.cyan}); display:flex; align-items:center; justify-content:center; font-size:28px; cursor:pointer; z-index:90; box-shadow:0 4px 24px rgba(0,212,170,0.3); transition:all 0.15s; }
 .brain:active { transform:scale(0.9); }
+
+.coach-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; opacity:0; transition:opacity 0.3s; pointer-events:none; }
+.coach-overlay.open { opacity:1; pointer-events:all; }
+.coach-panel { position:fixed; bottom:0; left:50%; transform:translateX(-50%); max-width:500px; width:100%; background:${S.card}; border-top-left-radius:24px; border-top-right-radius:24px; z-index:201; max-height:85vh; overflow-y:auto; transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); transform:translateX(-50%) translateY(100%); box-shadow:0 -8px 40px rgba(0,0,0,0.5); }
+.coach-panel.open { transform:translateX(-50%) translateY(0); }
+.coach-handle { width:36px; height:4px; background:rgba(255,255,255,0.2); border-radius:2px; margin:12px auto 0; }
+.coach-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px 20px 12px; border-bottom:1px solid ${S.border}; }
+.coach-body { padding:16px 20px 100px; }
+.coach-preparing { display:flex; align-items:center; gap:10px; padding:16px 20px; background:rgba(0,212,170,0.06); border-bottom:1px solid ${S.border}; }
+.coach-pulse { width:10px; height:10px; border-radius:50%; background:${S.green}; animation:coachPulse 1.2s infinite; }
+@keyframes coachPulse { 0%,100% { opacity:0.4; transform:scale(0.8); } 50% { opacity:1; transform:scale(1.2); } }
+
+.med-card { background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.2); border-radius:14px; padding:14px; margin-bottom:8px; }
+.med-name { font-size:15px; font-weight:800; color:${S.t1}; }
+.med-dose { font-size:12px; color:${S.purple}; font-weight:700; margin-top:2px; }
+.med-sched { font-size:11px; color:${S.t3}; margin-top:4px; }
+.med-due { background:rgba(245,158,11,0.12); color:${S.orange}; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
+.med-overdue { background:rgba(239,68,68,0.12); color:${S.red}; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
+
+.bw-marker { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:700; }
+.bw-normal { background:rgba(0,212,170,0.1); color:${S.green}; }
+.bw-flag { background:rgba(245,158,11,0.12); color:${S.orange}; }
+.bw-critical { background:rgba(239,68,68,0.12); color:${S.red}; }
 
 .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:200; display:flex; align-items:flex-end; justify-content:center; }
 .modal { background:${S.card}; border-top:2px solid ${S.green}; border-radius:24px 24px 0 0; max-width:500px; width:100%; max-height:90dvh; overflow-y:auto; padding:20px 20px 32px; animation:slideUp 0.25s ease; }
@@ -1077,10 +1141,8 @@ return (
 </div>
 <div className="date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</div>
 </div>
-<div className="hdr-icon">
-<svg viewBox="0 0 40 40" fill="none" style={{ width: "60%", height: "60%" }}>
-<polyline stroke="#00e5c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points="4,20 10,20 14,20 18,8 22,32 26,14 30,24 34,20 38,20" style={{ filter: "drop-shadow(0 0 4px rgba(0,229,199,0.5))" }}/>
-</svg>
+<div className="hdr-icon" style={{ background: "linear-gradient(135deg, #00e5c7, #00d4ff)", color: "#0b1120", fontWeight: 900, fontSize: 18, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: 1 }}>
+SW
 </div>
 </div>
 </div>
@@ -1261,48 +1323,45 @@ onClick={() => setPlanOpen(p => !p)}>
 {tab === "food" && (
 <div className="content">
 
-{/* Barcode Scanner (Camera) */}
+{/* Barcode Scanner (UPC Lookup) */}
 <div style={{ padding: "0 16px", marginBottom: 10 }}>
-<button className="btn" style={{ width: "100%", background: "rgba(6,182,212,0.08)", color: S.cyan, border: "1.5px solid rgba(6,182,212,0.25)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, height: 52 }}
-onClick={() => {
-if (!navigator.mediaDevices) { show("Camera not available"); return; }
-const inp = document.createElement("input");
-inp.type = "file";
-inp.accept = "image/*";
-inp.capture = "environment";
-inp.onchange = async (ev) => {
-const file = ev.target.files[0];
-if (!file) return;
-show("Scanning barcode...");
-const reader = new FileReader();
-reader.onload = async (re) => {
-const img = re.target.result;
+<div style={{ display: "flex", gap: 8 }}>
+<input 
+  id="upc-input"
+  type="text" inputMode="numeric" pattern="[0-9]*"
+  placeholder="Enter UPC barcode number..."
+  style={{ flex: 1, height: 52, background: "rgba(255,255,255,0.04)", border: "1.5px solid rgba(6,182,212,0.25)", borderRadius: 14, padding: "0 14px", color: S.t1, fontSize: 15, fontFamily: "'Plus Jakarta Sans',sans-serif", outline: "none" }}
+  onKeyDown={(e) => { if (e.key === "Enter") document.getElementById("upc-lookup-btn")?.click(); }}
+/>
+<button id="upc-lookup-btn" className="btn" style={{ width: 80, background: "rgba(6,182,212,0.08)", color: S.cyan, border: "1.5px solid rgba(6,182,212,0.25)", height: 52, fontWeight: 700, fontSize: 13 }}
+onClick={async () => {
+const code = document.getElementById("upc-input")?.value?.trim();
+if (!code) { show("Enter a barcode number"); return; }
+show("Looking up " + code + "...");
 try {
-const resp = await fetch("https://world.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&search_terms=" + encodeURIComponent(file.name.replace(/\.[^.]+$/, "")));
-show("Use manual UPC: tap and enter the number from the package");
-const code = prompt("Enter the barcode number shown on the package:");
-if (!code || !code.trim()) return;
-const r = await fetch("https://world.openfoodfacts.org/api/v0/product/" + code.trim() + ".json");
-const d = await r.json();
-if (d.status === 1 && d.product) {
-const p = d.product; const nm = p.product_name || "Unknown"; const nu = p.nutriments || {};
-const cal = Math.round(nu["energy-kcal_serving"] || nu["energy-kcal_100g"] || 0);
-const pro = Math.round(nu.proteins_serving || nu.proteins_100g || 0);
-const carb = Math.round(nu.carbohydrates_serving || nu.carbohydrates_100g || 0);
-const fat = Math.round(nu.fat_serving || nu.fat_100g || 0);
-if (confirm(nm + " - " + cal + " cal, " + pro + "g protein. Log this?")) {
-setFoods(prev => [...prev, { n: nm, c: cal, p: pro, cb: carb, f: fat, i: String.fromCodePoint(0x1F3F7), time: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) }]);
-show("Logged " + nm);
-}
-} else { show("Product not found for that barcode"); }
-} catch(e) { show("Scan failed - try again"); }
-};
-reader.readAsDataURL(file);
-};
-inp.click();
+  const r = await fetch("https://world.openfoodfacts.org/api/v0/product/" + code + ".json");
+  const d = await r.json();
+  if (d.status === 1 && d.product) {
+    const p = d.product; const nm = p.product_name || "Unknown Product"; const nu = p.nutriments || {};
+    const serving = p.serving_size || "1 serving";
+    const cal = Math.round(nu["energy-kcal_serving"] || nu["energy-kcal_100g"] || 0);
+    const pro = Math.round(nu.proteins_serving || nu.proteins_100g || 0);
+    const carb = Math.round(nu.carbohydrates_serving || nu.carbohydrates_100g || 0);
+    const fat = Math.round(nu.fat_serving || nu.fat_100g || 0);
+    if (confirm(nm + " (" + serving + ")\n" + cal + " cal | " + pro + "g protein | " + carb + "g carbs | " + fat + "g fat\n\nLog this?")) {
+      setFoods(prev => [...prev, { n: nm, c: cal, p: pro, cb: carb, f: fat, i: "\uD83C\uDFF7\uFE0F", time: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) }]);
+      show("\u2713 Logged " + nm);
+      document.getElementById("upc-input").value = "";
+    }
+  } else { show("Product not found — try a different barcode"); }
+} catch(e) { show("Lookup failed — check connection"); }
 }}>
-{String.fromCodePoint(0x1F4F7)} Scan Barcode / Enter UPC
+Lookup
 </button>
+</div>
+<div style={{ fontSize: 11, color: S.t3, marginTop: 6, textAlign: "center" }}>
+Enter the barcode number from any food package — pulls from Open Food Facts database (2M+ products)
+</div>
 </div>
 <div className="card" style={{ marginTop: 14 }}>
 <div style={{ display: "flex", justifyContent: "space-around" }}>
@@ -1635,6 +1694,9 @@ cpap: { ahi, hours: cpH, mask: cpM },
 bp: bp.slice(0, 3),
 nutrition: { cal: tCal, protein: tPro, carbs: tCarb, fat: tFat, items: foods.length },
 workouts: workouts.map(w => `${w.name} ${w.mins}m`),
+medications: meds.map(m => `${m.name} ${m.dose} ${m.freq} (${m.day})`),
+todayIsInjectionDay: meds.some(m => m.day === new Date().toLocaleDateString("en-US", { weekday: "long" })),
+profile: userProfile,
 };
 
 const userContent = [];
@@ -1651,7 +1713,25 @@ const PROXY = "https://zestful-education-production-88e7.up.railway.app";
 const res = await fetch(`${PROXY}/ai/analyze`, {
 method: "POST", headers: { "Content-Type": "application/json" },
 body: JSON.stringify({
-system: `You are VitalCommand AI for Scott Watkins (58, lost 70+lbs 280→${wt || 210}). He trains full-body strength + cardio with kettlebells, barbells, assault bike, rower, elliptical. Tracks WHOOP, Garmin, Withings scale, CPAP/myAir. Protein goal ${goalPro}g/day, ${goalCal} cal/day. Fitness goal: ${fitnessGoal}.
+system: `You are the VitalCommand IQ Coach for ${userProfile.sex === "female" ? "a" : ""} ${userProfile.age}-year-old ${userProfile.sex} (lost 70+lbs 280→${wt || 210}). Trains full-body strength + cardio with kettlebells, barbells, assault bike, rower, elliptical. Has infrared sauna and cold plunge. Tracks WHOOP, Garmin, Withings scale, CPAP/myAir. Protein goal ${goalPro}g/day, ${goalCal} cal/day. Fitness goal: ${fitnessGoal}.
+${userProfile.conditions.length > 0 ? "Health conditions: " + userProfile.conditions.join(", ") + "." : ""}
+
+CURRENT MEDICATIONS (factor these into ALL coaching advice):
+${meds.map(m => "- " + m.name + " " + m.dose + " " + m.freq + " (" + m.day + "): " + m.notes).join("\n")}
+
+RECOVERY MODALITY COACHING:
+- If Infrared Sauna was logged: Comment on duration, whether it was beneficial given recovery %, suggest optimal time (15-25 min for recovery days, 10-15 min post-workout). Note that 20+ min may increase cortisol if already high strain. Factor in HRV and recovery score.
+- If Cold Plunge was logged: Comment on timing relative to workout (avoid within 4hrs of strength training as it blunts muscle protein synthesis). Ideal: 3-5 min at 50-55°F for recovery. Longer isn't better. Best on rest days or after cardio only.
+- Always note how these modalities affect next-day recovery based on WHOOP data patterns.
+
+WEEKLY INTELLIGENCE:
+- Consider ALL workouts logged today, not just the current one
+- If user has done multiple days of training, note cumulative strain and recovery trends
+- Factor in sleep debt, HRV trends, and suggest rest days when appropriate
+- Note if medication timing affects today's training (e.g., Zepbound injection day = lighter training recommended due to potential nausea/fatigue)
+
+BLOODWORK AWARENESS:
+${bloodwork.length > 0 ? "Recent bloodwork: " + JSON.stringify(bloodwork.slice(-1)) : "No bloodwork on file."}
 
 CRITICAL: When analyzing device screenshots, ALWAYS start your response with a JSON block wrapped in \`\`\`json ... \`\`\` containing ALL extracted metrics. Use these exact keys (omit any you can't find):
 {
@@ -1760,7 +1840,7 @@ setAiResp("Connection error. Check your network and try again.");
 }
 setAiLoading(false);
 }}>
-{aiLoading ? "✨ Analyzing..." : "✨ Analyze with AI"}
+{aiLoading ? "✨ IQ Coach is analyzing..." : "✨ Analyze with IQ Coach"}
 </button>
 
 <textarea value={aiText} onChange={e => setAiText(e.target.value)}
@@ -1910,7 +1990,132 @@ Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
 </div>
 
 <div className="card">
-<div className="card-title" style={{ marginBottom: 14 }}>💾 Data Storage</div>
+<div className="card-title" style={{ marginBottom: 14 }}>💊 Medications</div>
+{meds.map((m, i) => {
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+  const isDue = m.day === today;
+  return (
+  <div className="med-card" key={i}>
+  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+    <div>
+      <div className="med-name">{m.name}</div>
+      <div className="med-dose">{m.dose} · {m.type}</div>
+      <div className="med-sched">Every {m.day} at {m.time} · {m.freq}</div>
+    </div>
+    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      {isDue && <span className="med-due">DUE TODAY</span>}
+      <button style={{ background: "none", border: "none", color: S.t3, fontSize: 16, cursor: "pointer" }}
+        onClick={() => { if (confirm("Remove " + m.name + "?")) setMeds(p => p.filter((_, j) => j !== i)); }}>×</button>
+    </div>
+  </div>
+  <div style={{ fontSize: 11, color: S.t3, marginTop: 6, fontStyle: "italic" }}>{m.notes}</div>
+  </div>
+  );
+})}
+<button className="btn" style={{ marginTop: 8, background: "rgba(168,85,247,0.1)", color: S.purple, border: "1.5px solid rgba(168,85,247,0.3)" }}
+  onClick={() => {
+    const name = prompt("Medication name:");
+    if (!name) return;
+    const dose = prompt("Dosage (e.g. 200mg):") || "";
+    const freq = prompt("Frequency (daily/weekly/biweekly):") || "daily";
+    const day = freq !== "daily" ? (prompt("Day of week (e.g. Monday):") || "Monday") : "Daily";
+    const time = prompt("Time (e.g. 08:00):") || "08:00";
+    const type = prompt("Type (pill/injection/topical):") || "pill";
+    const notes = prompt("Notes (effects on training, side effects):") || "";
+    setMeds(p => [...p, { name, dose, freq, day, time, type, notes }]);
+    show("\u2713 Added " + name);
+  }}>+ Add Medication</button>
+</div>
+
+<div className="card">
+<div className="card-hdr" style={{ cursor: "pointer" }} onClick={() => setBwExpanded(!bwExpanded)}>
+  <div className="card-title">{"\uD83E\uDE78"} Bloodwork</div>
+  <div style={{ fontSize: 12, color: S.t3 }}>{bwExpanded ? "\u25B2" : "\u25BC"} {bloodwork.length > 0 ? bloodwork.length + " test" + (bloodwork.length > 1 ? "s" : "") : "None"}</div>
+</div>
+{bloodwork.length > 0 && (() => {
+  const latest = bloodwork[bloodwork.length - 1];
+  const testDate = new Date(latest.date);
+  const daysSince = Math.floor((Date.now() - testDate.getTime()) / (1000 * 60 * 60 * 24));
+  const isOld = daysSince > 365;
+  return (
+    <div style={{ marginTop: 8 }}>
+    {isOld && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: S.red, fontWeight: 700 }}>{"\u26A0\uFE0F"} Bloodwork is {Math.floor(daysSince / 30)} months old {"\u2014"} schedule updated labs{parseInt(userProfile.age) >= 50 ? " (recommended every 6 months at age " + userProfile.age + ")" : ""}</div>}
+    <div style={{ fontSize: 12, color: S.t3, marginBottom: 8 }}>Last test: {testDate.toLocaleDateString()} ({daysSince} days ago)</div>
+    </div>
+  );
+})()}
+{bwExpanded && (
+<div>
+{bloodwork.length === 0 && <div style={{ fontSize: 13, color: S.t3, padding: "12px 0" }}>No bloodwork uploaded yet. Upload lab results on the IQ tab or add manually below.</div>}
+{bloodwork.length > 0 && bloodwork.slice(-1).map((bw, bi) => (
+  <div key={bi} className="sg" style={{ gap: 6 }}>
+  {Object.entries(bw.markers || {}).map(([key, val]) => {
+    const RANGES = { glucose: [70,100], a1c: [0,5.7], tsh: [0.4,4.0], testosterone: [300,1000], total_cholesterol: [0,200], ldl: [0,100], hdl: [40,999], triglycerides: [0,150], creatinine: [0.7,1.3], bun: [7,20], egfr: [60,999], alt: [7,56], ast: [10,40], wbc: [4.5,11], rbc: [4.5,5.5], hemoglobin: [13.5,17.5], hematocrit: [38.3,48.6], platelets: [150,400], vitD: [30,100], b12: [200,900], iron: [60,170], ferritin: [20,500], psa: [0,4] };
+    const range = RANGES[key];
+    const v = parseFloat(val);
+    const status = !range ? "normal" : (v < range[0] || v > range[1]) ? (v < range[0] * 0.8 || v > range[1] * 1.3 ? "critical" : "flag") : "normal";
+    return (
+      <div key={key} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${S.border}`, borderRadius: 10, padding: 8 }}>
+        <div style={{ fontSize: 10, color: S.t3, textTransform: "uppercase", fontWeight: 700, letterSpacing: 1 }}>{key.replace(/_/g, " ")}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 2 }}>
+          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 800, color: status === "normal" ? S.green : status === "flag" ? S.orange : S.red }}>{val}</span>
+          {range && <span style={{ fontSize: 10, color: S.t3 }}>{range[0]}-{range[1]}</span>}
+        </div>
+      </div>
+    );
+  })}
+  </div>
+))}
+<button className="btn" style={{ marginTop: 10, background: "rgba(6,182,212,0.08)", color: S.cyan, border: "1.5px solid rgba(6,182,212,0.25)" }}
+  onClick={() => {
+    const date = prompt("Test date (YYYY-MM-DD):") || new Date().toISOString().split("T")[0];
+    const markers = {};
+    const keyMarkers = ["glucose","a1c","testosterone","total_cholesterol","ldl","hdl","triglycerides","tsh","creatinine","egfr","alt","ast","psa","hemoglobin","hematocrit","vitD","b12","iron","ferritin"];
+    keyMarkers.forEach(k => {
+      const v = prompt(k.replace(/_/g, " ").toUpperCase() + " (leave blank to skip):");
+      if (v && v.trim()) markers[k] = v.trim();
+    });
+    if (Object.keys(markers).length > 0) {
+      setBW(p => [...p, { date, markers }]);
+      show("\u2713 Bloodwork saved \u2014 " + Object.keys(markers).length + " markers");
+    }
+  }}>+ Add Bloodwork Results</button>
+</div>
+)}
+</div>
+
+<div className="card">
+<div className="card-title" style={{ marginBottom: 14 }}>{"\uD83D\uDC64"} Health Profile</div>
+<div className="sg" style={{ gap: 8 }}>
+  <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: 10 }}>
+    <div style={{ fontSize: 10, color: S.t3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Sex</div>
+    <div style={{ fontSize: 16, fontWeight: 800, color: S.t1, marginTop: 2 }}>{userProfile.sex}</div>
+  </div>
+  <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: 10 }}>
+    <div style={{ fontSize: 10, color: S.t3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Age</div>
+    <div style={{ fontSize: 16, fontWeight: 800, color: S.t1, marginTop: 2 }}>{userProfile.age}</div>
+  </div>
+  <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: 10 }}>
+    <div style={{ fontSize: 10, color: S.t3, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>Height</div>
+    <div style={{ fontSize: 16, fontWeight: 800, color: S.t1, marginTop: 2 }}>{userProfile.height}</div>
+  </div>
+</div>
+{userProfile.conditions.length > 0 && (
+  <div style={{ marginTop: 10, fontSize: 12, color: S.t2 }}>Conditions: <span style={{ color: S.orange, fontWeight: 700 }}>{userProfile.conditions.join(", ")}</span></div>
+)}
+<button className="btn" style={{ marginTop: 10, background: "rgba(255,255,255,0.04)", color: S.t2, border: `1.5px solid ${S.border}` }}
+  onClick={() => {
+    const sex = prompt("Sex (male/female):", userProfile.sex) || userProfile.sex;
+    const age = prompt("Age:", userProfile.age) || userProfile.age;
+    const height = prompt("Height:", userProfile.height) || userProfile.height;
+    const conditions = prompt("Health conditions (comma-separated):", userProfile.conditions.join(", "));
+    setUserProfile({ sex, age, height, conditions: conditions ? conditions.split(",").map(c => c.trim()).filter(Boolean) : [] });
+    show("\u2713 Profile updated");
+  }}>Edit Profile</button>
+</div>
+
+<div className="card">
+<div className="card-title" style={{ marginBottom: 14 }}>{"\uD83D\uDCBE"} Data Storage</div>
 <div style={{ fontSize: 13, color: S.t2, marginBottom: 12 }}>
 All data auto-saves and persists between sessions.
 </div>
@@ -1924,6 +2129,7 @@ show("✓ Today's logs cleared");
 <button className="btn" style={{ background: "rgba(239,68,68,0.05)", color: S.red, border: `1.5px solid rgba(239,68,68,0.15)` }}
 onClick={async () => {
 if (confirm("Reset ALL data including metrics, food log, workouts, and BP?") && confirm("This CANNOT be undone. Are you absolutely sure?")) {
+try { localStorage.removeItem("vciq-data"); } catch(e) {}
 try { await window.storage.delete("vciq-data"); } catch(e) {}
 setFoods([]); setWkts([]); setBp([]);
 setWt("213.8"); setBf("39.4"); setMm("165.8"); setVf("8");
@@ -1936,7 +2142,68 @@ show("✓ All data reset");
 </div>
 )}
 
-<div className="brain" onClick={() => setTab("ai")}>📋</div>
+{/* ── IQ Coach Slide-Up Panel ── */}
+<div className={`coach-overlay ${coachOpen ? "open" : ""}`} onClick={() => { if (!coachLoading) setCoachOpen(false); }} />
+<div className={`coach-panel ${coachOpen ? "open" : ""}`}>
+<div className="coach-handle" />
+<div className="coach-hdr">
+<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+<div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #00e5c7, #00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 14, color: "#0b1120" }}>IQ</div>
+<div>
+<div style={{ fontSize: 15, fontWeight: 800, color: S.t1 }}>IQ Coach</div>
+<div style={{ fontSize: 11, color: S.t3 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div>
+</div>
+</div>
+<button style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: S.t3, fontSize: 14, padding: "6px 12px", cursor: "pointer" }}
+onClick={() => setCoachOpen(false)}>✕</button>
+</div>
+{coachLoading && (
+<div className="coach-preparing">
+<div className="coach-pulse" />
+<div style={{ fontSize: 13, color: S.green, fontWeight: 700 }}>IQ Coach is preparing your personalized briefing...</div>
+</div>
+)}
+<div className="coach-body">
+{coachResp ? (
+<div dangerouslySetInnerHTML={{ __html: parseCoachMarkdown(coachResp) }} style={{ fontSize: 14, color: "#e2e8f0", lineHeight: 1.7 }} />
+) : !coachLoading ? (
+<div style={{ textAlign: "center", padding: "40px 0", color: S.t3 }}>
+<div style={{ fontSize: 40, marginBottom: 12 }}>✨</div>
+<div style={{ fontSize: 14 }}>Tap a topic below or ask a question</div>
+</div>
+) : null}
+</div>
+{/* Quick Coach Topics */}
+{!coachLoading && (
+<div style={{ position: "sticky", bottom: 0, padding: "12px 20px 24px", background: S.card, borderTop: `1px solid ${S.border}` }}>
+<div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+{[
+  { label: "Day Review", q: `Give me a full day-in-review. Today I did: ${workouts.map(w => w.name + " " + w.mins + "m").join(", ") || "nothing yet"}. My recovery was ${rec}%, HRV ${hrv}ms, strain ${strain}. I ate ${tCal} cal / ${tPro}g protein. Sleep was ${sleepHours || slp} hours. ${workouts.some(w => w.name.includes("Sauna")) ? "I did infrared sauna " + workouts.find(w => w.name.includes("Sauna"))?.mins + " minutes." : ""} ${workouts.some(w => w.name.includes("Cold")) ? "I did cold plunge " + workouts.find(w => w.name.includes("Cold"))?.mins + " minutes." : ""} Give me the full story of my day with insights, what went well, and what to improve. ${meds.some(m => m.day === new Date().toLocaleDateString("en-US", { weekday: "long" })) ? "Today is also injection day for: " + meds.filter(m => m.day === new Date().toLocaleDateString("en-US", { weekday: "long" })).map(m => m.name).join(", ") : ""}` },
+  { label: "What Should I Do?", q: `Based on recovery ${rec}%, HRV ${hrv}ms, strain so far ${strain}, sleep ${sleepHours || slp} hours, and the fact that I've done ${workouts.length} exercises today (${workouts.map(w => w.name).join(", ") || "none"}), what should my next workout be? Factor in my medications: ${meds.map(m => m.name + " " + m.dose + " on " + m.day + "s").join(", ")}. Today is ${new Date().toLocaleDateString("en-US", { weekday: "long" })}.` },
+  { label: "Sauna/Plunge Tips", q: `Given my recovery at ${rec}%, HRV ${hrv}ms, and today's strain ${strain}, should I do infrared sauna, cold plunge, both, or neither today? How long for each? What order? I'm ${userProfile.age} years old with a resting HR of ${rhr} bpm.` },
+  { label: "Med Check", q: `Review my current medications and their impact on my training: ${meds.map(m => m.name + " " + m.dose + " " + m.freq + " (" + m.day + ") - " + m.notes).join("; ")}. Today is ${new Date().toLocaleDateString("en-US", { weekday: "long" })}. How do these affect my workout today? Any timing considerations?` },
+].map(t => (
+<button key={t.label} style={{ padding: "8px 14px", borderRadius: 20, background: "rgba(0,212,170,0.08)", border: "1px solid rgba(0,212,170,0.2)", color: S.green, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+onClick={async () => {
+  setCoachLoading(true); setCoachResp("");
+  try {
+    const coachCtx = { weight: wt, bodyFat: bf, muscle: mm, recovery: rec, hrv, strain, sleep: sleepHours || slp, rhr, spo2, steps, caloriesBurned, nutrition: { cal: tCal, protein: tPro, carbs: tCarb, fat: tFat }, workouts: workouts.map(w => w.name + " " + w.mins + "m"), medications: meds.map(m => m.name + " " + m.dose + " " + m.freq + " (" + m.day + ")"), profile: userProfile };
+    const res = await fetch("https://zestful-education-production-88e7.up.railway.app/ai/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+      system: `You are the VitalCommand IQ Coach — a personal health intelligence AI for a ${userProfile.age}-year-old ${userProfile.sex}. ${userProfile.conditions.length ? "Health conditions: " + userProfile.conditions.join(", ") + "." : ""} Medications: ${meds.map(m => m.name + " " + m.dose + " " + m.freq + " on " + m.day + " — " + m.notes).join("; ")}. Speak conversationally like a knowledgeable personal trainer who also understands pharmacology. Use bold for key metrics. Be specific with numbers. Keep responses under 300 words. Include recovery modality guidance (sauna, cold plunge) when relevant.`,
+      messages: [{ role: "user", content: "Health data: " + JSON.stringify(coachCtx) + "\n\n" + t.q }]
+    }) });
+    const data = await res.json();
+    setCoachResp(data.content ? data.content.map(c => c.text || "").join("") : "No response");
+  } catch(e) { setCoachResp("Connection error. Try again."); }
+  setCoachLoading(false);
+}}>{t.label}</button>
+))}
+</div>
+</div>
+)}
+</div>
+
+<div className="brain" onClick={() => { setCoachOpen(true); if (!coachResp && !coachLoading) { /* just open panel */ } }} style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: 1, color: "#0b1120" }}>IQ</div>
 
 <div className="bnav">
 {[
