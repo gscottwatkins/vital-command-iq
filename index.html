@@ -1,18 +1,1091 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#060b18" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-    <title>VitalCommand IQ</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Scoreboard - Professional</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 15px;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px 30px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .header h1 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Quote Section */
+        .quote-section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 15px 25px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .quote-icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .quote-text {
+            font-size: 18px;
+            font-style: italic;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        /* Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 15px;
+            overflow: hidden;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 18px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            display: flex;
+            flex-direction: column;
+            color: #1a202c;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-icon {
+            font-size: 26px;
+        }
+
+        .big-number {
+            font-size: 44px;
+            font-weight: 800;
+            margin-bottom: 14px;
+            line-height: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .agent-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: auto;
+        }
+
+        .agent-card {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            padding: 10px;
+            border-radius: 10px;
+            border-left: 3px solid #667eea;
+        }
+
+        .agent-name {
+            font-size: 10px;
+            color: #718096;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .agent-value {
+            font-size: 15px;
+            font-weight: 800;
+            color: #2d3748;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 9px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #718096;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .lead-item {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            border-left: 3px solid #667eea;
+        }
+
+        .lead-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .lead-value {
+            font-size: 13px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .progress-container {
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+            min-width: 3px;
+        }
+
+        .card-highlight {
+            background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+            border: 2px solid #f59e0b;
+        }
+
+        .card-highlight .big-number {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-highlight .agent-card {
+            background: rgba(255,255,255,0.7);
+            border-left-color: #f59e0b;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            right: 20px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-loading {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .status-success {
+            background: #d1fae5;
+            color: #059669;
+        }
+        
+        .status-error {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .status-warning {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .progress-text {
+            font-size: 11px;
+            color: #4a5568;
+            text-align: center;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+        
+        .debug-info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-info" id="debugInfo">
+        Debug: Loading...
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Production Scoreboard</h1>
+            <div class="subtitle">Being consistently consistent will make me a millionaire</div>
+        </div>
+
+        <!-- Daily Quote -->
+        <div class="quote-section">
+            <div class="quote-icon">💭</div>
+            <div class="quote-text" id="dailyQuote">Money follows small actions repeated daily.</div>
+        </div>
+
+        <div class="grid">
+            <!-- Today Commission -->
+            <div class="card card-highlight">
+                <div class="card-header">
+                    <div class="card-title">Today Commission</div>
+                    <div class="card-icon">💰</div>
+                </div>
+                <div class="big-number" id="todayCommission">$0</div>
+                <div class="agent-grid">
+                    <div class="agent-card">
+                        <span class="agent-name">Scott</span>
+                        <span class="agent-value" id="todayCommissionScott">$0</span>
+                    </div>
+                    <div class="agent-card">
+                        <span class="agent-name">George Knox</span>
+                        <span class="agent-value" id="todayCommissionGeorge">$0</span>
+                    </div>
+                    <div class="agent-card">
+                        <span class="agent-name">Other Agents</span>
+                        <span class="agent-value" id="todayCommissionOther">$0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WTD Commission -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Week to Date</div>
+                    <div class="card-icon">📅</div>
+                </div>
+                <div class="big-number" id="wtdCommission">$0</div>
+                <div class="metric-row">
+                    <span class="metric-label">Scott</span>
+                    <span class="metric-value" id="wtdCommissionScott">$0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">George Knox</span>
+                    <span class="metric-value" id="wtdCommissionGeorge">$0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Other Agents</span>
+                    <span class="metric-value" id="wtdCommissionOther">$0</span>
+                </div>
+            </div>
+
+            <!-- MTD Commission -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Month to Date</div>
+                    <div class="card-icon">📊</div>
+                </div>
+                <div class="big-number" id="mtdCommission">$0</div>
+                <div class="metric-row">
+                    <span class="metric-label">Scott</span>
+                    <span class="metric-value" id="mtdCommissionScott">$0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">George Knox</span>
+                    <span class="metric-value" id="mtdCommissionGeorge">$0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Other Agents</span>
+                    <span class="metric-value" id="mtdCommissionOther">$0</span>
+                </div>
+            </div>
+
+            <!-- YTD Commission -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Year to Date</div>
+                    <div class="card-icon">🎯</div>
+                </div>
+                <div class="big-number" id="ytdCommission">$0</div>
+                <div class="metric-row">
+                    <span class="metric-label">Annual Goal</span>
+                    <span class="metric-value">$450,000</span>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="commissionProgressBar" style="width: 0%;"></div>
+                    </div>
+                    <div class="progress-text" id="commissionProgressPercent">0%</div>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Progress</span>
+                    <span class="metric-value" id="commissionProgressText">0%</span>
+                </div>
+            </div>
+
+            <!-- Today Production -->
+            <div class="card card-highlight">
+                <div class="card-header">
+                    <div class="card-title">Today Production</div>
+                    <div class="card-icon">📈</div>
+                </div>
+                <div class="big-number" id="todayProduction">$0</div>
+                <div class="agent-grid">
+                    <div class="agent-card">
+                        <span class="agent-name">Scott</span>
+                        <span class="agent-value" id="todayProductionScott">$0</span>
+                    </div>
+                    <div class="agent-card">
+                        <span class="agent-name">George Knox</span>
+                        <span class="agent-value" id="todayProductionGeorge">$0</span>
+                    </div>
+                    <div class="agent-card">
+                        <span class="agent-name">Other Agents</span>
+                        <span class="agent-value" id="todayProductionOther">$0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WTD Production -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">WTD Production</div>
+                    <div class="card-icon">📈</div>
+                </div>
+                <div class="big-number" id="wtdProduction">$0</div>
+                <div class="metric-row">
+                    <span class="metric-label">Scott</span>
+                    <span class="metric-value" id="wtdProductionScott">$0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">George Knox</span>
+                    <span class="metric-value" id="wtdProductionGeorge">$0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Other Agents</span>
+                    <span class="metric-value" id="wtdProductionOther">$0</span>
+                </div>
+            </div>
+
+            <!-- MTD Production -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">MTD Production</div>
+                    <div class="card-icon">📈</div>
+                </div>
+                <div class="big-number" id="mtdProduction">$0</div>
+                <div class="metric-row">
+                    <span class="metric-label">Scott</span>
+                    <span class="metric-value" id="mtdProductionScott">$0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">George Knox</span>
+                    <span class="metric-value" id="mtdProductionGeorge">$0</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Other Agents</span>
+                    <span class="metric-value" id="mtdProductionOther">$0</span>
+                </div>
+            </div>
+
+            <!-- Top Leads -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Top Lead Sources</div>
+                    <div class="card-icon">🏆</div>
+                </div>
+                <div id="leadSourcesContainer">
+                    <div class="lead-item">
+                        <span class="lead-name">Loading lead data...</span>
+                        <span class="lead-value">$0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Last Updated: <span id="timestamp">Loading...</span> | 
+        Auto-refresh: 60s | 
+        Status: <span id="dataStatus" class="status-badge status-loading">Loading</span>
+    </div>
+
+    <script>
+        // =============== CONFIGURATION ===============
+        const GOOGLE_SHEET_ID = '1Qq_5pf1NAax774KfEyS8ajlhrK5deJSBJ5Bl8PaAG34';
+        const CALCULATIONS_GID = '1982686496';
+
+        // 2026 Goals
+        const GOALS = {
+            commission: 450000,
+            production: 1500000,
+            deals: 600
+        };
+
+        // =============== HELPER FUNCTIONS ===============
+
+        function formatCurrency(amount) {
+            if (isNaN(amount)) amount = 0;
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function formatDateForComparison(date) {
+            if (!date) return '';
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getStartOfWeek(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const start = new Date(d.setDate(diff));
+            start.setHours(0, 0, 0, 0);
+            return start;
+        }
+
+        function updateDataStatus(message, status) {
+            const statusElement = document.getElementById('dataStatus');
+            statusElement.textContent = message;
+            
+            statusElement.classList.remove('status-loading', 'status-success', 'status-error', 'status-warning');
+            
+            if (status === 'loading') {
+                statusElement.classList.add('status-loading');
+            } else if (status === 'success') {
+                statusElement.classList.add('status-success');
+            } else if (status === 'error') {
+                statusElement.classList.add('status-error');
+            } else if (status === 'warning') {
+                statusElement.classList.add('status-warning');
+            }
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            const options = { 
+                weekday: 'short',
+                month: 'short', 
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
+            document.getElementById('timestamp').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        // =============== GOOGLE SHEETS DATA FETCH ===============
+
+        async function fetchGoogleSheetData() {
+            try {
+                updateDataStatus('Loading data...', 'loading');
+
+
+
+
+
+                
+
+
+
+
+
+                
+                const proxyUrl = 'https://corsproxy.io/?';
+                const sheetUrl = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&gid=${CALCULATIONS_GID}`;
+                
+                console.log('Fetching from:', sheetUrl);
+                
+                const response = await fetch(proxyUrl + encodeURIComponent(sheetUrl));
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const text = await response.text();
+
+
+
+
+                // DEBUG: Log raw response
+                console.log('=== RAW RESPONSE (first 2000 chars) ===');
+                console.log(text.substring(0, 2000));
+                console.log('=== END RAW RESPONSE ===');
+
+
+
+
+                
+                // Extract JSON
+                const jsonMatch = text.match(/google\.visualization\.Query\.setResponse\(({.*})\);/s) || 
+                                text.match(/{.*}/s);
+                
+                if (!jsonMatch) {
+                    throw new Error('Invalid response format from Google Sheets');
+                }
+                
+                const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                const rows = data.table.rows || [];
+                
+                console.log(`Found ${rows.length} total rows`);
+
+
+                // DEBUG: Log ALL raw row data
+                console.log('=== ALL ROW DATA ===');
+                rows.forEach((row, i) => {
+                    const cells = row.c || [];
+                    console.log(`Row ${i}:`, cells.map((cell, cellIndex) => ({
+                        index: cellIndex,
+                        value: cell?.v,
+                        formula: cell?.f,
+                        type: typeof cell?.v
+                    })));
+                });
+                console.log('=== END ROW DATA ===');
+                
+                if (rows.length === 0) {
+                    updateDataStatus('No data found in sheet', 'warning');
+                    return [];
+                }
+                
+                // Parse ALL data rows
+                const parsedData = [];
+                
+                // Skip header row if exists
+                const startIndex = (rows[0]?.c?.[0]?.v?.toString().toLowerCase().includes('date')) ? 1 : 0;
+                
+                for (let i = startIndex; i < rows.length; i++) {
+                    const cells = rows[i].c || [];
+                    
+                    // Parse date - handle Google Sheets format
+                    let dateValue = cells[0]?.v;
+                    let date = null;
+                    
+                    if (dateValue) {
+                        if (typeof dateValue === 'string' && dateValue.startsWith('Date(')) {
+                            // Format: Date(2026,0,15)
+                            const match = dateValue.match(/Date\((\d+),(\d+),(\d+)\)/);
+                            if (match) {
+                                const year = parseInt(match[1]);
+                                const month = parseInt(match[2]); // 0-based
+                                const day = parseInt(match[3]);
+                                date = new Date(year, month, day);
+                            }
+                        } else if (typeof dateValue === 'number') {
+                            // Excel serial number (days since 1899-12-30)
+                            // Google Sheets uses this format
+                            const excelEpoch = new Date(1899, 11, 30);
+                            date = new Date(excelEpoch.getTime() + dateValue * 86400000);
+                        } else {
+                            // Try regular parsing
+                            date = new Date(dateValue);
+                        }
+                    }
+                    
+                    // Parse other fields
+                    const status = (cells[9]?.v || '').toString().trim();
+                    const monthlyPremium = parseFloat(cells[11]?.v) || 0;
+                    const netAdvance = parseFloat(cells[26]?.v) || 0;
+                    const agent = (cells[1]?.v || '').toString().trim();
+                    const leadVendor = (cells[2]?.v || '').toString().trim();
+                    
+                    // Skip if not approved or no valid date
+                    if (status.toLowerCase() !== 'approved' || !date || isNaN(date.getTime())) {
+                        continue;
+                    }
+                    
+                    parsedData.push({
+                        date: date,
+                        agent: agent,
+                        leadVendor: leadVendor,
+                        status: status,
+                        monthlyPremium: monthlyPremium,
+                        annualPremium: monthlyPremium * 12,
+                        netAdvance: netAdvance,
+                        coverageAmount: parseFloat(cells[10]?.v) || 0
+                    });
+                    
+                    // Log every row for debugging
+                    console.log(`Parsed row ${i}:`, {
+                        date: date.toLocaleDateString(),
+                        agent: agent,
+                        status: status,
+                        premium: monthlyPremium,
+                        commission: netAdvance,
+                        lead: leadVendor
+                    });
+                }
+                
+                console.log(`Successfully parsed ${parsedData.length} approved deals`);
+                
+                // Calculate totals for debugging
+                const totalCommission = parsedData.reduce((sum, row) => sum + row.netAdvance, 0);
+                const totalProduction = parsedData.reduce((sum, row) => sum + row.annualPremium, 0);
+                
+                console.log(`Total Commission: $${totalCommission}`);
+                console.log(`Total Production: $${totalProduction}`);
+                
+                updateDataStatus(`Loaded ${parsedData.length} approved deals`, 'success');
+                return parsedData;
+                
+            } catch (error) {
+                console.error('Error fetching Google Sheet data:', error);
+                updateDataStatus('Error: ' + error.message, 'error');
+                return [];
+            }
+        }
+
+        // =============== CALCULATE METRICS ===============
+
+        function calculateMetrics(data) {
+            console.log('Calculating metrics for', data.length, 'deals');
+            
+            // For TESTING: Force all dates to be included
+            // Remove this in production
+            const includeAllData = true;
+            
+            const now = new Date();
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const startOfWeek = getStartOfWeek(today);
+            const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const startOfYear = new Date(today.getFullYear(), 0, 1);
+            
+            console.log('Date ranges:', {
+                today: today.toLocaleDateString(),
+                startOfWeek: startOfWeek.toLocaleDateString(),
+                startOfMonth: startOfMonth.toLocaleDateString(),
+                startOfYear: startOfYear.toLocaleDateString()
+            });
+            
+            const metrics = {
+                today: { commission: 0, production: 0, deals: 0 },
+                wtd: { commission: 0, production: 0, deals: 0 },
+                mtd: { commission: 0, production: 0, deals: 0 },
+                ytd: { commission: 0, production: 0, deals: 0 },
+                
+                byAgent: {
+                    scott: { 
+                        today: { commission: 0, production: 0, deals: 0 },
+                        wtd: { commission: 0, production: 0, deals: 0 },
+                        mtd: { commission: 0, production: 0, deals: 0 },
+                        ytd: { commission: 0, production: 0, deals: 0 }
+                    },
+                    george: { 
+                        today: { commission: 0, production: 0, deals: 0 },
+                        wtd: { commission: 0, production: 0, deals: 0 },
+                        mtd: { commission: 0, production: 0, deals: 0 },
+                        ytd: { commission: 0, production: 0, deals: 0 }
+                    },
+                    other: { 
+                        today: { commission: 0, production: 0, deals: 0 },
+                        wtd: { commission: 0, production: 0, deals: 0 },
+                        mtd: { commission: 0, production: 0, deals: 0 },
+                        ytd: { commission: 0, production: 0, deals: 0 }
+                    }
+                },
+                
+                leadSources: {}
+            };
+            
+            data.forEach((row, index) => {
+                if (!row.date) {
+                    console.warn(`Row ${index} has no date`);
+                    return;
+                }
+                
+                const rowDate = new Date(row.date);
+                rowDate.setHours(0, 0, 0, 0);
+                
+                console.log(`Processing row ${index}:`, {
+                    date: rowDate.toLocaleDateString(),
+                    agent: row.agent,
+                    commission: row.netAdvance
+                });
+                
+                // Determine agent category
+                let agentCategory = 'other';
+                const agentName = (row.agent || '').toLowerCase();
+                if (agentName.includes('scott')) {
+                    agentCategory = 'scott';
+                } else if (agentName.includes('george') || agentName.includes('knox')) {
+                    agentCategory = 'george';
+                }
+                
+                // FOR TESTING: Include ALL data regardless of date
+                if (includeAllData) {
+                    // Add to YTD (all data)
+                    metrics.ytd.commission += row.netAdvance;
+                    metrics.ytd.production += row.annualPremium;
+                    metrics.ytd.deals += 1;
+                    
+                    metrics.byAgent[agentCategory].ytd.commission += row.netAdvance;
+                    metrics.byAgent[agentCategory].ytd.production += row.annualPremium;
+                    metrics.byAgent[agentCategory].ytd.deals += 1;
+                    
+                    // Add to MTD (all data)
+                    metrics.mtd.commission += row.netAdvance;
+                    metrics.mtd.production += row.annualPremium;
+                    metrics.mtd.deals += 1;
+                    
+                    metrics.byAgent[agentCategory].mtd.commission += row.netAdvance;
+                    metrics.byAgent[agentCategory].mtd.production += row.annualPremium;
+                    metrics.byAgent[agentCategory].mtd.deals += 1;
+                    
+                    // Add to WTD (all data)
+                    metrics.wtd.commission += row.netAdvance;
+                    metrics.wtd.production += row.annualPremium;
+                    metrics.wtd.deals += 1;
+                    
+                    metrics.byAgent[agentCategory].wtd.commission += row.netAdvance;
+                    metrics.byAgent[agentCategory].wtd.production += row.annualPremium;
+                    metrics.byAgent[agentCategory].wtd.deals += 1;
+                    
+                    // Check if today (for testing, check Feb dates)
+                    const isFebDate = rowDate.getMonth() === 1; // February is month 1 (0-based)
+                    if (isFebDate && rowDate.getDate() === 3) {
+                        metrics.today.commission += row.netAdvance;
+                        metrics.today.production += row.annualPremium;
+                        metrics.today.deals += 1;
+                        
+                        metrics.byAgent[agentCategory].today.commission += row.netAdvance;
+                        metrics.byAgent[agentCategory].today.production += row.annualPremium;
+                        metrics.byAgent[agentCategory].today.deals += 1;
+                    }
+                } else {
+                    // NORMAL DATE FILTERING (use this in production)
+                    // TODAY
+                    if (rowDate.getTime() === today.getTime()) {
+                        metrics.today.commission += row.netAdvance;
+                        metrics.today.production += row.annualPremium;
+                        metrics.today.deals += 1;
+                        
+                        metrics.byAgent[agentCategory].today.commission += row.netAdvance;
+                        metrics.byAgent[agentCategory].today.production += row.annualPremium;
+                        metrics.byAgent[agentCategory].today.deals += 1;
+                    }
+                    
+                    // WEEK TO DATE
+                    if (rowDate >= startOfWeek) {
+                        metrics.wtd.commission += row.netAdvance;
+                        metrics.wtd.production += row.annualPremium;
+                        metrics.wtd.deals += 1;
+                        
+                        metrics.byAgent[agentCategory].wtd.commission += row.netAdvance;
+                        metrics.byAgent[agentCategory].wtd.production += row.annualPremium;
+                        metrics.byAgent[agentCategory].wtd.deals += 1;
+                    }
+                    
+                    // MONTH TO DATE
+                    if (rowDate >= startOfMonth) {
+                        metrics.mtd.commission += row.netAdvance;
+                        metrics.mtd.production += row.annualPremium;
+                        metrics.mtd.deals += 1;
+                        
+                        metrics.byAgent[agentCategory].mtd.commission += row.netAdvance;
+                        metrics.byAgent[agentCategory].mtd.production += row.annualPremium;
+                        metrics.byAgent[agentCategory].mtd.deals += 1;
+                    }
+                    
+                    // YEAR TO DATE
+                    if (rowDate >= startOfYear) {
+                        metrics.ytd.commission += row.netAdvance;
+                        metrics.ytd.production += row.annualPremium;
+                        metrics.ytd.deals += 1;
+                        
+                        metrics.byAgent[agentCategory].ytd.commission += row.netAdvance;
+                        metrics.byAgent[agentCategory].ytd.production += row.annualPremium;
+                        metrics.byAgent[agentCategory].ytd.deals += 1;
+                    }
+                }
+                
+                // Track lead sources for all data
+                if (row.leadVendor && row.leadVendor.trim()) {
+                    const vendor = row.leadVendor.trim();
+                    if (!metrics.leadSources[vendor]) {
+                        metrics.leadSources[vendor] = {
+                            production: 0,
+                            deals: 0
+                        };
+                    }
+                    metrics.leadSources[vendor].production += row.annualPremium;
+                    metrics.leadSources[vendor].deals += 1;
+                }
+            });
+            
+            console.log('Final metrics:', {
+                todayCommission: metrics.today.commission,
+                wtdCommission: metrics.wtd.commission,
+                mtdCommission: metrics.mtd.commission,
+                ytdCommission: metrics.ytd.commission,
+                agents: metrics.byAgent
+            });
+            
+            return metrics;
+        }
+
+        // =============== UPDATE DASHBOARD ===============
+
+        function updateDashboard(metrics) {
+            console.log('Updating dashboard with metrics:', metrics);
+            
+            // Today Commission
+            document.getElementById('todayCommission').textContent = formatCurrency(metrics.today.commission);
+            document.getElementById('todayCommissionScott').textContent = formatCurrency(metrics.byAgent.scott.today.commission);
+            document.getElementById('todayCommissionGeorge').textContent = formatCurrency(metrics.byAgent.george.today.commission);
+            document.getElementById('todayCommissionOther').textContent = formatCurrency(metrics.byAgent.other.today.commission);
+            
+            // WTD Commission
+            document.getElementById('wtdCommission').textContent = formatCurrency(metrics.wtd.commission);
+            document.getElementById('wtdCommissionScott').textContent = formatCurrency(metrics.byAgent.scott.wtd.commission);
+            document.getElementById('wtdCommissionGeorge').textContent = formatCurrency(metrics.byAgent.george.wtd.commission);
+            document.getElementById('wtdCommissionOther').textContent = formatCurrency(metrics.byAgent.other.wtd.commission);
+            
+            // MTD Commission
+            document.getElementById('mtdCommission').textContent = formatCurrency(metrics.mtd.commission);
+            document.getElementById('mtdCommissionScott').textContent = formatCurrency(metrics.byAgent.scott.mtd.commission);
+            document.getElementById('mtdCommissionGeorge').textContent = formatCurrency(metrics.byAgent.george.mtd.commission);
+            document.getElementById('mtdCommissionOther').textContent = formatCurrency(metrics.byAgent.other.mtd.commission);
+            
+            // YTD Commission
+            document.getElementById('ytdCommission').textContent = formatCurrency(metrics.ytd.commission);
+            
+            // Calculate progress
+            const commissionProgress = Math.min(100, (metrics.ytd.commission / GOALS.commission) * 100);
+            const progressWidth = Math.max(3, commissionProgress); // Minimum 3% width for visibility
+            document.getElementById('commissionProgressBar').style.width = `${progressWidth}%`;
+            document.getElementById('commissionProgressPercent').textContent = `${commissionProgress.toFixed(1)}%`;
+            
+            let progressText = `${commissionProgress.toFixed(1)}%`;
+            if (commissionProgress >= 100) {
+                progressText += ' (GOAL ACHIEVED!)';
+            } else if (commissionProgress >= 75) {
+                progressText += ' (AHEAD)';
+            } else if (commissionProgress >= 50) {
+                progressText += ' (ON TRACK)';
+            } else {
+                progressText += ' (BEHIND)';
+            }
+            document.getElementById('commissionProgressText').textContent = progressText;
+            
+            // Today Production
+            document.getElementById('todayProduction').textContent = formatCurrency(metrics.today.production);
+            document.getElementById('todayProductionScott').textContent = formatCurrency(metrics.byAgent.scott.today.production);
+            document.getElementById('todayProductionGeorge').textContent = formatCurrency(metrics.byAgent.george.today.production);
+            document.getElementById('todayProductionOther').textContent = formatCurrency(metrics.byAgent.other.today.production);
+            
+            // WTD Production
+            document.getElementById('wtdProduction').textContent = formatCurrency(metrics.wtd.production);
+            document.getElementById('wtdProductionScott').textContent = formatCurrency(metrics.byAgent.scott.wtd.production);
+            document.getElementById('wtdProductionGeorge').textContent = formatCurrency(metrics.byAgent.george.wtd.production);
+            document.getElementById('wtdProductionOther').textContent = formatCurrency(metrics.byAgent.other.wtd.production);
+            
+            // MTD Production
+            document.getElementById('mtdProduction').textContent = formatCurrency(metrics.mtd.production);
+            document.getElementById('mtdProductionScott').textContent = formatCurrency(metrics.byAgent.scott.mtd.production);
+            document.getElementById('mtdProductionGeorge').textContent = formatCurrency(metrics.byAgent.george.mtd.production);
+            document.getElementById('mtdProductionOther').textContent = formatCurrency(metrics.byAgent.other.mtd.production);
+            
+            // Update lead sources
+            updateLeadSources(metrics.leadSources);
+        }
+
+        function updateLeadSources(leadSources) {
+            const container = document.getElementById('leadSourcesContainer');
+            
+            const sortedLeads = Object.entries(leadSources)
+                .sort((a, b) => b[1].production - a[1].production);
+            
+            if (sortedLeads.length === 0) {
+                container.innerHTML = '<div class="lead-item"><span class="lead-name">No lead data</span><span class="lead-value">$0</span></div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            sortedLeads.forEach(([leadName, data]) => {
+                const leadItem = document.createElement('div');
+                leadItem.className = 'lead-item';
+                leadItem.innerHTML = `
+                    <span class="lead-name">${leadName}</span>
+                    <span class="lead-value">${formatCurrency(data.production)}</span>
+                `;
+                container.appendChild(leadItem);
+            });
+        }
+
+        // =============== QUOTE ROTATION ===============
+
+        const quotes = [
+            { text: "Money follows small actions repeated daily.", category: "weekday" },
+            { text: "Production cures anxiety.", category: "weekday" },
+            { text: "Dials create deals.", category: "weekday" },
+            { text: "The money is in the follow-up.", category: "weekday" },
+            { text: "Consistency compounds.", category: "weekday" },
+            { text: "Activity breeds opportunity.", category: "weekday" },
+            { text: "Outwork your excuses.", category: "weekday" },
+            { text: "Every no gets you closer to yes.", category: "weekday" },
+            { text: "The pipeline doesn't lie.", category: "weekday" },
+            { text: "Momentum is built daily.", category: "weekday" },
+            { text: "Income follows action.", category: "weekday" },
+            { text: "Control the controllables.", category: "weekday" },
+            
+            { text: "I decide once, then I live with it.", category: "weekend" },
+            { text: "Action beats waiting.", category: "weekend" },
+            { text: "Keep the main thing the main thing.", category: "weekend" },
+            { text: "Discipline equals freedom.", category: "weekend" },
+            { text: "Standards, not feelings.", category: "weekend" },
+            { text: "The work works if I work.", category: "weekend" },
+            { text: "I don't negotiate with myself.", category: "weekend" },
+            { text: "Do it now, feel good later.", category: "weekend" },
+            { text: "Success is a system, not a wish.", category: "weekend" },
+            { text: "Show up when you don't feel like it.", category: "weekend" },
+            { text: "The best time is now.", category: "weekend" }
+        ];
+
+        function getDailyQuote() {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            
+            const availableQuotes = quotes.filter(q => 
+                isWeekend ? q.category === "weekend" : q.category === "weekday"
+            );
+            
+            const start = new Date(now.getFullYear(), 0, 0);
+            const diff = now - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const dayOfYear = Math.floor(diff / oneDay);
+            
+            const quoteIndex = dayOfYear % availableQuotes.length;
+            return availableQuotes[quoteIndex].text;
+        }
+
+        // =============== MAIN DASHBOARD FUNCTION ===============
+
+        async function loadDashboard() {
+            try {
+                // Update quote
+                document.getElementById('dailyQuote').textContent = getDailyQuote();
+                
+                // Update timestamp
+                updateTimestamp();
+                
+                // Fetch data
+                const data = await fetchGoogleSheetData();
+                
+                if (data.length > 0) {
+                    // Calculate and update
+                    const metrics = calculateMetrics(data);
+                    updateDashboard(metrics);
+                } else {
+                    updateDataStatus('No approved deals found', 'warning');
+                }
+                
+            } catch (error) {
+                console.error('Dashboard error:', error);
+                updateDataStatus('Error: ' + error.message, 'error');
+            }
+        }
+
+        // =============== INITIALIZE ===============
+
+        // Load immediately
+        loadDashboard();
+
+        // Auto-refresh every 60 seconds
+        setInterval(loadDashboard, 60000);
+
+        // Full page refresh every 30 minutes
+        setTimeout(() => {
+            location.reload();
+        }, 1800000);
+        
+    </script>
+</body>
 </html>
