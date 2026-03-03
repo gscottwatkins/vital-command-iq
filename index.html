@@ -284,7 +284,28 @@ const [whoopStatus, setWhoopStatus] = useState("saved");
 const [withingsStatus, setWithingsStatus] = useState("saved");
 const [aiExtracted, setAiExtracted] = useState(null); // Review & Save panel
 const [storageReady, setStorageReady] = useState(false);
+const [apiLoaded, setApiLoaded] = useState(false); // prevent save during API load
 const fileRef = useRef(null);
+
+// Editable Goals
+const [goalCal, setGoalCal] = useState("2000");
+const [goalPro, setGoalPro] = useState("200");
+const [goalCarb, setGoalCarb] = useState("150");
+const [goalFat, setGoalFat] = useState("65");
+const [goalModal, setGoalModal] = useState(false);
+const [fitnessGoal, setFitnessGoal] = useState("weight_loss_muscle"); // weight_loss, muscle_build, weight_loss_muscle, maintenance
+
+// WHOOP extended metrics
+const [rhr, setRhr] = useState("");
+const [spo2, setSpo2] = useState("");
+const [avgHr, setAvgHr] = useState("");
+const [maxHr, setMaxHr] = useState("");
+const [sleepHours, setSleepHours] = useState("");
+const [caloriesBurned, setCaloriesBurned] = useState("");
+
+// Sync state
+const [syncing, setSyncing] = useState(false);
+const [lastSync, setLastSync] = useState(null);
 
 const show = useCallback((m) => { setToast(m); setTimeout(() => setToast(null), 2200); }, []);
 
@@ -295,7 +316,7 @@ const tCarb = foods.reduce((s, f) => s + f.cb, 0);
 const tFat = foods.reduce((s, f) => s + f.f, 0);
 const tWoMin = workouts.reduce((s, w) => s + w.mins, 0);
 const tWoCal = workouts.reduce((s, w) => s + w.cal, 0);
-const goals = { cal: 2000, pro: 200, carb: 150, fat: 65 };
+const goals = { cal: parseInt(goalCal) || 2000, pro: parseInt(goalPro) || 200, carb: parseInt(goalCarb) || 150, fat: parseInt(goalFat) || 65 };
 
 // Weather
 useEffect(() => {
@@ -334,6 +355,15 @@ if (d.bp) setBp(d.bp);
 if (d.foods) setFoods(d.foods);
 if (d.workouts) setWkts(d.workouts);
 if (d.woSets) setWoSets(d.woSets);
+if (d.goalCal) setGoalCal(d.goalCal);
+if (d.goalPro) setGoalPro(d.goalPro);
+if (d.goalCarb) setGoalCarb(d.goalCarb);
+if (d.goalFat) setGoalFat(d.goalFat);
+if (d.fitnessGoal) setFitnessGoal(d.fitnessGoal);
+if (d.rhr) setRhr(d.rhr); if (d.spo2) setSpo2(d.spo2);
+if (d.avgHr) setAvgHr(d.avgHr); if (d.maxHr) setMaxHr(d.maxHr);
+if (d.sleepHours) setSleepHours(d.sleepHours);
+if (d.caloriesBurned) setCaloriesBurned(d.caloriesBurned);
 setWhoopStatus("saved"); setWithingsStatus("saved");
 }
 } catch(e) { console.log("Storage load:", e); }
@@ -342,12 +372,12 @@ setStorageReady(true);
 loadAll();
 }, []);
 
-// ── Auto-fetch WHOOP + Withings on mount ──
-useEffect(() => {
-if (!storageReady) return;
+// ── Sync function (reusable for auto + manual) ──
+const syncData = useCallback(async (showToast = false) => {
+setSyncing(true);
 const PROXY = "https://zestful-education-production-88e7.up.railway.app";
+let whoopOk = false, withingsOk = false;
 // Fetch WHOOP data
-(async () => {
 try {
 const res = await fetch(PROXY + "/whoop/all");
 const d = await res.json();
@@ -355,14 +385,19 @@ if (d.connected) {
 if (d.recovery != null) setRec(String(d.recovery));
 if (d.hrv != null) setHrv(String(d.hrv));
 if (d.strain != null) setStrain(String(d.strain));
-if (d.sleep_hours != null) setSlp(String(d.sleep_hours));
+if (d.sleep_hours != null) { setSlp(String(d.sleep_hours)); setSleepHours(String(d.sleep_hours)); }
+if (d.rhr != null) setRhr(String(d.rhr));
+if (d.spo2 != null) setSpo2(String(d.spo2));
+if (d.avg_hr != null) setAvgHr(String(d.avg_hr));
+if (d.max_hr != null) setMaxHr(String(d.max_hr));
+if (d.calories_burned != null) setCaloriesBurned(String(d.calories_burned));
+if (d.sleep_score != null) setRec(String(d.sleep_score));
 setWhoopStatus("saved");
-console.log("[WHOOP] Auto-loaded:", d);
+whoopOk = true;
+console.log("[WHOOP] Synced:", d);
 }
 } catch(e) { console.log("[WHOOP] fetch error:", e.message); }
-})();
 // Fetch Withings data
-(async () => {
 try {
 const res = await fetch(PROXY + "/withings/body");
 const d = await res.json();
@@ -372,11 +407,26 @@ if (d.body_fat != null) setBf(String(d.body_fat));
 if (d.muscle_mass != null) setMm(String(d.muscle_mass));
 if (d.visceral_fat != null) setVf(String(d.visceral_fat));
 setWithingsStatus("saved");
-console.log("[Withings] Auto-loaded:", d);
+withingsOk = true;
+console.log("[Withings] Synced:", d);
 }
 } catch(e) { console.log("[Withings] fetch error:", e.message); }
-})();
-}, [storageReady]);
+setSyncing(false);
+setLastSync(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+setApiLoaded(true);
+if (showToast) {
+const parts = [];
+if (whoopOk) parts.push("WHOOP");
+if (withingsOk) parts.push("Withings");
+show(parts.length > 0 ? `✓ Synced: ${parts.join(" + ")}` : "⚠️ No device data available");
+}
+}, [show]);
+
+// Auto-sync on mount (after storage loads)
+useEffect(() => {
+if (!storageReady) return;
+syncData(false);
+}, [storageReady, syncData]);
 
 
 // ── Persistent Storage — Auto-save on data change ──
@@ -389,11 +439,13 @@ try {
 await window.storage.set("vciq-data", JSON.stringify({
 wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM,
 bp, foods, workouts, savedAt: new Date().toISOString(),
+goalCal, goalPro, goalCarb, goalFat, fitnessGoal,
+rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned,
 }));
 } catch(e) { console.log("Storage save:", e); }
 }, 1500);
 return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-}, [wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM, bp, foods, workouts, storageReady]);
+}, [wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM, bp, foods, workouts, storageReady, goalCal, goalPro, goalCarb, goalFat, fitnessGoal, rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned]);
 
 const wIcon = (c) => c <= 1 ? "☀️" : c <= 3 ? "⛅" : c <= 48 ? "☁️" : c <= 67 ? "🌧️" : c <= 82 ? "🌦️" : "⛈️";
 
@@ -794,6 +846,14 @@ return (
 <div className="inp-label">Strain</div>
 <input className="inp" type="number" placeholder="0-21" value={strain} onChange={e => setStrain(e.target.value)} inputMode="decimal" />
 </div>
+<div>
+<div className="inp-label">Resting HR</div>
+<input className="inp" type="number" placeholder="bpm" value={rhr} onChange={e => setRhr(e.target.value)} inputMode="numeric" />
+</div>
+<div>
+<div className="inp-label">SpO2</div>
+<input className="inp" type="number" placeholder="%" value={spo2} onChange={e => setSpo2(e.target.value)} inputMode="decimal" />
+</div>
 </div>
 <div className="inp-label">CPAP Data</div>
 <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
@@ -802,6 +862,74 @@ return (
 <input className="inp" type="number" placeholder="Seal %" value={cpM} onChange={e => setCpM(e.target.value)} inputMode="numeric" />
 </div>
 <button className="btn btn-g" onClick={() => { show("✓ Sleep data saved"); setModal(null); }}>Save Sleep Data</button>
+</>
+)}
+
+{modal === "goals" && (
+<>
+<div className="modal-title">🎯 Set Your Goals</div>
+<div className="inp-label">Fitness Goal</div>
+<div className="tog" style={{ marginBottom: 14, flexWrap: "wrap" }}>
+{[
+{ id: "weight_loss", label: "🔥 Fat Loss" },
+{ id: "muscle_build", label: "💪 Muscle Build" },
+{ id: "weight_loss_muscle", label: "⚡ Both" },
+{ id: "maintenance", label: "🎯 Maintain" },
+].map(g => (
+<div key={g.id} className={`tog-btn ${fitnessGoal === g.id ? "on" : ""}`}
+style={{ flex: "1 1 45%", textAlign: "center" }}
+onClick={() => {
+setFitnessGoal(g.id);
+if (g.id === "weight_loss") { setGoalCal("1800"); setGoalPro("200"); setGoalCarb("100"); setGoalFat("60"); }
+else if (g.id === "muscle_build") { setGoalCal("2400"); setGoalPro("220"); setGoalCarb("200"); setGoalFat("75"); }
+else if (g.id === "weight_loss_muscle") { setGoalCal("2000"); setGoalPro("200"); setGoalCarb("150"); setGoalFat("65"); }
+else { setGoalCal("2200"); setGoalPro("180"); setGoalCarb("180"); setGoalFat("70"); }
+}}>{g.label}</div>
+))}
+</div>
+<div className="inp-label">Daily Calories</div>
+<input className="inp" type="number" value={goalCal} onChange={e => setGoalCal(e.target.value)} inputMode="numeric" style={{ marginBottom: 10 }} />
+<div className="sg" style={{ marginBottom: 14 }}>
+<div><div className="inp-label">Protein (g)</div><input className="inp" type="number" value={goalPro} onChange={e => setGoalPro(e.target.value)} inputMode="numeric" /></div>
+<div><div className="inp-label">Carbs (g)</div><input className="inp" type="number" value={goalCarb} onChange={e => setGoalCarb(e.target.value)} inputMode="numeric" /></div>
+<div><div className="inp-label">Fat (g)</div><input className="inp" type="number" value={goalFat} onChange={e => setGoalFat(e.target.value)} inputMode="numeric" /></div>
+</div>
+<button className="btn btn-g" onClick={() => { show("✓ Goals saved"); setModal(null); }}>Save Goals</button>
+</>
+)}
+
+{modal === "ai_workout" && (
+<>
+<div className="modal-title">🤖 AI Workout Recommendation</div>
+<div className="inp-label">What's your focus today?</div>
+<div className="tog" style={{ marginBottom: 14, flexWrap: "wrap" }}>
+{[
+{ id: "weight_loss", label: "🔥 Fat Burn" },
+{ id: "muscle_build", label: "💪 Build Muscle" },
+{ id: "weight_loss_muscle", label: "⚡ Both" },
+{ id: "recovery_light", label: "🧘 Recovery" },
+].map(g => (
+<div key={g.id} className={`tog-btn ${fitnessGoal === g.id ? "on" : ""}`}
+style={{ flex: "1 1 45%", textAlign: "center" }}
+onClick={() => setFitnessGoal(g.id)}>{g.label}</div>
+))}
+</div>
+<button className="btn btn-p" onClick={async () => {
+setAiLoading(true); setAiResp("");
+const ctx = { weight: wt, bodyFat: bf, muscle: mm, recovery: rec, hrv, strain, rhr, sleepHours: sleepHours || slp, fitnessGoal, availableEquipment: "kettlebells, barbell+rack, dumbbells, assault bike, rower, elliptical, heavy bag, bands, infrared sauna, cold plunge", recentWorkouts: workouts.map(w => w.name + " " + w.mins + "m").join(", ") || "none today" };
+try {
+const res = await fetch("https://zestful-education-production-88e7.up.railway.app/ai/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+system: `You are VitalCommand AI coach for Scott Watkins (58, ${wt || 213} lbs, ${mm || 165}+ lbs muscle). Design a workout based on his fitness goal, recovery status, available equipment, and recent activity. Be specific with exercises, sets, reps, weights, and rest times. Include warmup and cooldown. Keep under 300 words.`,
+messages: [{ role: "user", content: "Goal: " + fitnessGoal + "\nContext: " + JSON.stringify(ctx) + "\nDesign today's optimal workout." }]
+}) });
+const data = await res.json();
+setAiResp(data.content ? data.content.map(c => c.text || "").join("") : "No response");
+} catch(e) { setAiResp("Connection error."); }
+setAiLoading(false);
+setModal(null); setTab("ai");
+}}>
+{aiLoading ? "✨ Generating..." : "✨ Generate Workout Plan"}
+</button>
 </>
 )}
 </div>
@@ -899,7 +1027,7 @@ onClick={() => setPlanOpen(p => !p)}>
 <div className="act" onClick={() => setModal("bp")}><div className="act-icon">❤️</div><div className="act-label">Log BP</div></div>
 <div className="act" onClick={() => setTab("train")}><div className="act-icon">🏋️</div><div className="act-label">Workout</div></div>
 <div className="act" onClick={() => setModal("sleep")}><div className="act-icon">😴</div><div className="act-label">Sleep</div></div>
-<div className="act" onClick={() => setTab("ai")}><div className="act-icon">📷</div><div className="act-label">Upload</div></div>
+<div className="act" style={syncing ? { borderColor: S.green, background: "rgba(0,212,170,0.08)" } : {}} onClick={() => syncData(true)}><div className="act-icon">{syncing ? "⏳" : "🔄"}</div><div className="act-label">{syncing ? "Syncing..." : "Sync"}</div>{lastSync && <div style={{ fontSize: 9, color: S.t3 }}>{lastSync}</div>}</div>
 </div>
 
 <div className="sec">Today's Snapshot</div>
@@ -940,15 +1068,29 @@ onClick={() => setPlanOpen(p => !p)}>
 </div>
 </div>
 <div className="sg" style={{ padding: 0 }}>
-<div className="stat"><div className="stat-label">Sleep Score</div><div className="stat-val">{rec || "--"}<span className="stat-unit">%</span></div></div>
+<div className="stat"><div className="stat-label">Recovery</div><div className="stat-val">{rec || "--"}<span className="stat-unit">%</span></div></div>
 <div className="stat"><div className="stat-label">HRV</div><div className="stat-val">{hrv || "--"}<span className="stat-unit"> ms</span></div></div>
+<div className="stat"><div className="stat-label">Resting HR</div><div className="stat-val">{rhr || "--"}<span className="stat-unit"> bpm</span></div></div>
+<div className="stat"><div className="stat-label">SpO2</div><div className="stat-val">{spo2 || "--"}<span className="stat-unit">%</span></div></div>
+<div className="stat"><div className="stat-label">Sleep</div><div className="stat-val">{sleepHours || slp || "--"}<span className="stat-unit"> hrs</span></div></div>
+<div className="stat"><div className="stat-label">Strain</div><div className="stat-val">{strain || "--"}<span className="stat-unit"> /21</span></div></div>
 </div>
+{(avgHr || caloriesBurned) && (
+<div style={{ display: "flex", gap: 16, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${S.border}` }}>
+{avgHr && <div style={{ fontSize: 12, color: S.t2 }}>Avg HR: <span style={{ color: S.cyan, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{avgHr} bpm</span></div>}
+{maxHr && <div style={{ fontSize: 12, color: S.t2 }}>Max HR: <span style={{ color: S.orange, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{maxHr} bpm</span></div>}
+{caloriesBurned && <div style={{ fontSize: 12, color: S.t2 }}>Burned: <span style={{ color: S.green, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{caloriesBurned} cal</span></div>}
+</div>
+)}
 </div>
 
 <div className="card" style={{ borderLeft: `3px solid ${S.orange}` }}>
 <div className="card-hdr">
 <div className="card-title"><span style={{ fontSize: 20 }}>🍽️</span> Nutrition</div>
+<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+<div className="card-badge" style={{ background: "rgba(168,85,247,0.12)", color: S.purple, cursor: "pointer" }} onClick={() => setGoalModal(true)}>⚙️ Goals</div>
 <div className="card-badge" style={{ background: "rgba(245,158,11,0.12)", color: S.orange }}>{tCal} cal</div>
+</div>
 </div>
 <div style={{ display: "flex", justifyContent: "space-around", padding: "8px 0" }}>
 <Ring val={tPro} max={goals.pro} color={S.green} label="PROTEIN" />
@@ -1083,6 +1225,12 @@ show(`✓ ${qty}× ${item.n}`);
 {/* ══ TRAIN TAB ══ */}
 {tab === "train" && (
 <div className="content" style={{ paddingTop: 14 }}>
+
+{/* AI Workout Recommendation */}
+<button className="btn btn-p" style={{ width: "100%", marginBottom: 14, height: 52, fontSize: 15 }}
+onClick={() => setModal("ai_workout")}>
+🤖 AI Workout Recommendation
+</button>
 
 {/* Workout Summary Stats */}
 <div className="sg" style={{ marginBottom: 14 }}>
@@ -1335,7 +1483,7 @@ const PROXY = "https://zestful-education-production-88e7.up.railway.app";
 const res = await fetch(`${PROXY}/ai/analyze`, {
 method: "POST", headers: { "Content-Type": "application/json" },
 body: JSON.stringify({
-system: `You are VitalCommand AI for Scott Watkins (58, lost 70+lbs 280→${wt || 210}). He trains full-body strength + cardio with kettlebells, barbells, assault bike, rower, elliptical. Tracks WHOOP, Garmin, Withings scale, CPAP/myAir. Protein goal 200g/day, 2000 cal/day.
+system: `You are VitalCommand AI for Scott Watkins (58, lost 70+lbs 280→${wt || 210}). He trains full-body strength + cardio with kettlebells, barbells, assault bike, rower, elliptical. Tracks WHOOP, Garmin, Withings scale, CPAP/myAir. Protein goal ${goalPro}g/day, ${goalCal} cal/day. Fitness goal: ${fitnessGoal}.
 
 CRITICAL: When analyzing device screenshots, ALWAYS start your response with a JSON block wrapped in \`\`\`json ... \`\`\` containing ALL extracted metrics. Use these exact keys (omit any you can't find):
 {
@@ -1358,8 +1506,17 @@ CRITICAL: When analyzing device screenshots, ALWAYS start your response with a J
   "calories_burned": number,
   "bp_systolic": number,
   "bp_diastolic": number,
-  "bp_pulse": number
+  "bp_pulse": number,
+  "avg_hr": number,
+  "max_hr": number
 }
+
+IMPORTANT MERGE RULE: When both WHOOP and Garmin data exist, COMBINE them intelligently:
+- Use WHOOP for: recovery %, HRV, strain, sleep score, SpO2, respiratory rate
+- Use Garmin for: steps, VO2 max, training load, body battery, stress
+- For overlapping metrics (sleep hours, RHR, calories): average them or pick the more accurate source
+- NEVER override existing WHOOP data with Garmin equivalents — MERGE them
+- Note the source of each metric in your insights
 
 After the JSON block, provide brief actionable insights. Be concise and direct.`,
 messages: [{ role: "user", content: userContent }],
@@ -1537,13 +1694,15 @@ onClick={() => setAiExtracted(null)}>Skip</button>
 <div className="card">
 <div className="card-title" style={{ marginBottom: 14 }}>⚙️ Goals</div>
 <div style={{ fontSize: 13, color: S.t2, lineHeight: 2 }}>
-Daily Calories: <span style={{ color: S.t1, fontWeight: 700 }}>2,000</span><br />
-Daily Protein: <span style={{ color: S.t1, fontWeight: 700 }}>200g</span><br />
-Daily Carbs: <span style={{ color: S.t1, fontWeight: 700 }}>150g</span><br />
-Daily Fat: <span style={{ color: S.t1, fontWeight: 700 }}>65g</span><br />
+Daily Calories: <span style={{ color: S.t1, fontWeight: 700 }}>{parseInt(goalCal).toLocaleString()}</span><br />
+Daily Protein: <span style={{ color: S.t1, fontWeight: 700 }}>{goalPro}g</span><br />
+Daily Carbs: <span style={{ color: S.t1, fontWeight: 700 }}>{goalCarb}g</span><br />
+Daily Fat: <span style={{ color: S.t1, fontWeight: 700 }}>{goalFat}g</span><br />
+Fitness Goal: <span style={{ color: S.purple, fontWeight: 700 }}>{fitnessGoal === "weight_loss" ? "🔥 Fat Loss" : fitnessGoal === "muscle_build" ? "💪 Muscle Build" : fitnessGoal === "weight_loss_muscle" ? "⚡ Fat Loss + Muscle" : "🎯 Maintenance"}</span><br />
 Target Weight: <span style={{ color: S.green, fontWeight: 700 }}>199 lbs</span><br />
 Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
 </div>
+<button className="btn" style={{ marginTop: 12, background: "rgba(168,85,247,0.1)", color: S.purple, border: `1.5px solid rgba(168,85,247,0.3)` }} onClick={() => setModal("goals")}>Edit Goals</button>
 </div>
 
 <div className="card">
@@ -1592,6 +1751,41 @@ show("✓ All data reset");
 
 {toast && <div className="toast">{toast}</div>}
 {renderModal()}
+{goalModal && (
+<div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) setGoalModal(false); }}>
+<div className="modal">
+<div className="modal-bar" />
+<div className="modal-title">🎯 Set Your Goals</div>
+<div className="inp-label">Fitness Goal</div>
+<div className="tog" style={{ marginBottom: 14, flexWrap: "wrap" }}>
+{[
+{ id: "weight_loss", label: "🔥 Fat Loss" },
+{ id: "muscle_build", label: "💪 Muscle Build" },
+{ id: "weight_loss_muscle", label: "⚡ Both" },
+{ id: "maintenance", label: "🎯 Maintain" },
+].map(g => (
+<div key={g.id} className={`tog-btn ${fitnessGoal === g.id ? "on" : ""}`}
+style={{ flex: "1 1 45%", textAlign: "center" }}
+onClick={() => {
+setFitnessGoal(g.id);
+if (g.id === "weight_loss") { setGoalCal("1800"); setGoalPro("200"); setGoalCarb("100"); setGoalFat("60"); }
+else if (g.id === "muscle_build") { setGoalCal("2400"); setGoalPro("220"); setGoalCarb("200"); setGoalFat("75"); }
+else if (g.id === "weight_loss_muscle") { setGoalCal("2000"); setGoalPro("200"); setGoalCarb("150"); setGoalFat("65"); }
+else { setGoalCal("2200"); setGoalPro("180"); setGoalCarb("180"); setGoalFat("70"); }
+}}>{g.label}</div>
+))}
+</div>
+<div className="inp-label">Daily Calories</div>
+<input className="inp" type="number" value={goalCal} onChange={e => setGoalCal(e.target.value)} inputMode="numeric" style={{ marginBottom: 10 }} />
+<div className="sg" style={{ marginBottom: 14 }}>
+<div><div className="inp-label">Protein (g)</div><input className="inp" type="number" value={goalPro} onChange={e => setGoalPro(e.target.value)} inputMode="numeric" /></div>
+<div><div className="inp-label">Carbs (g)</div><input className="inp" type="number" value={goalCarb} onChange={e => setGoalCarb(e.target.value)} inputMode="numeric" /></div>
+<div><div className="inp-label">Fat (g)</div><input className="inp" type="number" value={goalFat} onChange={e => setGoalFat(e.target.value)} inputMode="numeric" /></div>
+</div>
+<button className="btn btn-g" onClick={() => { show("✓ Goals saved"); setGoalModal(false); }}>Save Goals</button>
+</div>
+</div>
+)}
 </div>
 </>
 );
