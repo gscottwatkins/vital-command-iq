@@ -44,7 +44,7 @@ const FOODS = {
 { n: "Biscuit", c: 280, p: 5, cb: 34, f: 14, i: "🧈" },
 { n: "Bacon (3 strips)", c: 130, p: 10, cb: 0, f: 10, i: "🥓" },
 { n: "Sausage (2 links)", c: 200, p: 12, cb: 2, f: 16, i: "🌭" },
-{ n: "Oatmeal (plain)", c: 150, p: 5, cb: 27, f: 3, i: "🥣" },
+{ n: "Oatmeal", c: 150, p: 5, cb: 27, f: 3, i: "🥣" },
 { n: "Parfait", c: 280, p: 8, cb: 48, f: 6, i: "🍨" },
 ],
 "Chick-fil-A": [
@@ -106,18 +106,6 @@ const FOODS = {
 { n: "Banana", c: 105, p: 1, cb: 27, f: 0, i: "🍌" },
 { n: "Almonds (1oz)", c: 160, p: 6, cb: 6, f: 14, i: "🥜" },
 { n: "Keto Bread (slice)", c: 40, p: 4, cb: 5, f: 1, i: "🍞", unit: "slice", perUnit: true },
-{ n: "Sara Lee Delights (slice)", c: 45, p: 2, cb: 9, f: 0.5, i: "🍞", unit: "slice", perUnit: true },
-{ n: "90/10 Ground Beef (4oz)", c: 200, p: 23, cb: 0, f: 11, i: "🥩" },
-{ n: "Burger Patty w/ Delights Bun", c: 290, p: 27, cb: 18, f: 12, i: "🍔" },
-{ n: "Tuna Pouch (StarKist)", c: 70, p: 17, cb: 0, f: 0.5, i: "🐟", unit: "pouch", perUnit: true },
-{ n: "Tuna Sandwich (Delights)", c: 250, p: 23, cb: 18, f: 12, i: "🥪" },
-{ n: "Fairlife Fat Free (cup)", c: 80, p: 13, cb: 6, f: 0, i: "🥛", unit: "cup", perUnit: true },
-{ n: "Blue Plate Mayo (tbsp)", c: 100, p: 0, cb: 0, f: 11, i: "🫙", unit: "tbsp", perUnit: true },
-{ n: "Grape Spread (tbsp)", c: 40, p: 0, cb: 9, f: 0, i: "🍇", unit: "tbsp", perUnit: true },
-{ n: "Oatmeal Maple Brown Sugar", c: 150, p: 3, cb: 31, f: 2, i: "🥣", unit: "packet", perUnit: true },
-{ n: "Oatmeal Apple Cinnamon", c: 150, p: 3, cb: 31, f: 1.5, i: "🥣", unit: "packet", perUnit: true },
-{ n: "Oatmeal Original", c: 150, p: 5, cb: 27, f: 2.5, i: "🥣", unit: "packet", perUnit: true },
-{ n: "PB&J on Delights", c: 380, p: 11, cb: 50, f: 17, i: "🥪" },
 ],
 "Treats": [
 { n: "Crumbl Choc Chip Cookie", c: 580, p: 6, cb: 72, f: 30, i: "🍪" },
@@ -184,40 +172,6 @@ const WORKOUTS = {
 { n: "Cold Plunge (51°F)", cpm: 3 },
 ],
 };
-
-
-// -- Daily Verse Rotation: Goodness of God --
-const VERSES = [
-{ref:"Exodus 33:19",t:"I will make all My goodness pass before you...",d:"Today I expect to see the goodness of God."},
-{ref:"Exodus 34:6",t:"The Lord, merciful and gracious, slow to anger, abounding in steadfast love.",d:"God is patient and generous toward me."},
-{ref:"1 Chr 16:34",t:"Give thanks to the Lord, for He is good; His steadfast love endures forever!",d:"His love for me has no expiration date."},
-{ref:"Psalm 23:6",t:"Surely goodness and mercy shall follow me all the days of my life...",d:"Goodness and mercy are chasing me down today."},
-{ref:"Psalm 25:7",t:"According to Your steadfast love remember me, for Your goodness, O Lord!",d:"God remembers me with kindness."},
-{ref:"Psalm 27:13",t:"I shall look upon the goodness of the Lord in the land of the living!",d:"I will see His goodness -- not someday, but today."},
-{ref:"Psalm 31:19",t:"How abundant is Your goodness, stored up for those who fear You...",d:"God has stored up goodness specifically for me."},
-{ref:"Psalm 34:8",t:"Taste and see that the Lord is good! Blessed is the man who takes refuge in Him!",d:"I take refuge in a God who is genuinely good."},
-{ref:"Psalm 65:11",t:"You crown the year with Your goodness, and Your paths drip with abundance.",d:"This year is crowned with His goodness."},
-{ref:"Psalm 86:5",t:"For You, O Lord, are good and forgiving, abounding in steadfast love...",d:"He is good AND forgiving. I receive both today."},
-{ref:"Psalm 100:5",t:"For the Lord is good; His steadfast love endures forever.",d:"His goodness endures forever."},
-{ref:"Psalm 103:8",t:"The Lord is merciful and gracious, slow to anger and abounding in steadfast love.",d:"God is slow to anger and rich in love toward me."},
-{ref:"Psalm 106:1",t:"Give thanks to the Lord, for He is good, His steadfast love endures forever!",d:"I start today with thanks -- He is good."},
-{ref:"Psalm 107:8-9",t:"He satisfies the longing soul, and fills the hungry soul with goodness.",d:"My hunger -- physical and spiritual -- He satisfies."},
-{ref:"Psalm 119:68",t:"You are good and do good...",d:"God is good in nature and good in action."},
-{ref:"Psalm 135:3",t:"Praise the Lord, for the Lord is good...",d:"Praise is my first response because He is good."},
-{ref:"Psalm 136:1",t:"Give thanks to the Lord, for He is good...",d:"Gratitude flows because of who He is."},
-{ref:"Psalm 145:9",t:"The Lord is good to all, and His mercy is over all that He has made.",d:"His mercy covers everything -- including me."},
-{ref:"Jer 31:14",t:"My people shall be satisfied with My goodness, declares the Lord.",d:"His promise: I will be satisfied with His goodness."},
-{ref:"Lam 3:25",t:"The Lord is good to those who wait for Him...",d:"Even in waiting, His goodness is at work."},
-{ref:"Nahum 1:7",t:"The Lord is good, a stronghold in the day of trouble...",d:"In hard moments, He is my stronghold."},
-{ref:"Matt 7:11",t:"How much more will your Father give good things to those who ask Him!",d:"My Father gives good things. I ask boldly."},
-{ref:"Mark 10:18",t:"No one is good except God alone.",d:"God alone defines goodness. I trust His standard."},
-{ref:"Acts 10:38",t:"He went about doing good and healing all who were oppressed...",d:"Jesus did good everywhere He went. He still does."},
-{ref:"Acts 14:17",t:"He did good by giving you rains from heaven and fruitful seasons...",d:"Every good season is evidence of His hand."},
-{ref:"Rom 2:4",t:"The riches of His kindness... meant to lead you to repentance.",d:"His kindness is not weakness -- it transforms me."},
-{ref:"James 1:17",t:"Every good gift and every perfect gift is from above...",d:"Every good thing in my life traces back to Him."},
-{ref:"1 Peter 2:3",t:"If indeed you have tasted that the Lord is good.",d:"I have tasted it. He is good. Period."},
-];
-const todayVerse = VERSES[Math.floor((new Date().getFullYear() * 366 + Math.floor((Date.now() - new Date(new Date().getFullYear(),0,0).getTime()) / 86400000)) % VERSES.length)];
 
 const S = {
 bg: "#0b1120", card: "#131c2e", border: "#1c2a42", accent: "#00d4aa",
@@ -846,17 +800,6 @@ onClick={() => setPlanOpen(p => !p)}>
 <div className="act" onClick={() => setTab("ai")}><div className="act-icon">📷</div><div className="act-label">Upload</div></div>
 </div>
 
-{/* Daily Verse */}
-<div style={{ background: "linear-gradient(135deg, rgba(168,85,247,0.08), rgba(236,72,153,0.05))", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 18, padding: 18, marginBottom: 16 }}>
-<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-<span style={{ fontSize: 18 }}>{String.fromCodePoint(0x1F4D6)}</span>
-<span style={{ fontSize: 12, fontWeight: 800, color: S.purple, letterSpacing: 1.5, textTransform: "uppercase" }}>{todayVerse.ref}</span>
-</div>
-<div style={{ fontSize: 14, lineHeight: 1.7, color: S.t1, fontStyle: "italic", marginBottom: 12 }}>{String.fromCharCode(8220)}{todayVerse.t}{String.fromCharCode(8221)}</div>
-<div style={{ fontSize: 13, fontWeight: 700, color: S.purple, paddingTop: 10, borderTop: "1px solid rgba(168,85,247,0.15)" }}>{todayVerse.d}</div>
-</div>
-
-
 <div className="sec">Today's Snapshot</div>
 
 <div className="card" style={{ borderLeft: `3px solid ${S.blue}` }}>
@@ -864,7 +807,7 @@ onClick={() => setPlanOpen(p => !p)}>
 <div className="card-title"><span style={{ fontSize: 20 }}>⚖️</span> Body Composition</div>
 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
 <span className={`api-badge ${withingsStatus === "saved" ? "api-live" : "api-off"}`}>{withingsStatus === "saved" ? "● SAVED" : "○ —"}</span>
-<div className="card-badge" style={{ background: "rgba(0,212,170,0.12)", color: S.green }}>-{(280 - (parseFloat(wt) || 210)).toFixed(1)} Lbs</div>
+<div className="card-badge" style={{ background: "rgba(0,212,170,0.12)", color: S.green }}>-{280 - (parseFloat(wt) || 210)} Lbs</div>
 </div>
 </div>
 <div className="sg" style={{ padding: 0 }}>
@@ -918,30 +861,6 @@ onClick={() => setPlanOpen(p => !p)}>
 {/* ══ FOOD TAB ══ */}
 {tab === "food" && (
 <div className="content">
-
-{/* Quick Barcode Scan */}
-<div style={{ padding: "0 16px", marginBottom: 10 }}>
-<button className="btn" style={{ width: "100%", background: "rgba(6,182,212,0.08)", color: S.cyan, border: "1.5px solid rgba(6,182,212,0.25)", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
-onClick={() => {
-const code = prompt("Enter barcode (UPC):");
-if (!code || !code.trim()) return;
-show("Looking up...");
-fetch("https://world.openfoodfacts.org/api/v0/product/" + code.trim() + ".json")
-.then(r => r.json()).then(d => {
-if (d.status === 1 && d.product) {
-const p = d.product; const nm = p.product_name || "Unknown"; const nu = p.nutriments || {};
-const cal = Math.round(nu["energy-kcal_serving"] || nu["energy-kcal_100g"] || 0);
-const pro = Math.round(nu.proteins_serving || nu.proteins_100g || 0);
-const carb = Math.round(nu.carbohydrates_serving || nu.carbohydrates_100g || 0);
-const fat = Math.round(nu.fat_serving || nu.fat_100g || 0);
-setFoods(prev => [...prev, { n: nm, c: cal, p: pro, cb: carb, f: fat, i: String.fromCodePoint(0x1F3F7), time: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) }]);
-show("Logged " + nm + " (" + cal + " cal)");
-} else { show("Not found"); }
-}).catch(() => show("Lookup failed"));
-}}>
-{String.fromCodePoint(0x1F3F7)} Quick Barcode Scan
-</button>
-</div>
 <div className="card" style={{ marginTop: 14 }}>
 <div style={{ display: "flex", justifyContent: "space-around" }}>
 <Ring val={tCal} max={goals.cal} color={S.cyan} label="CAL" />
@@ -1084,30 +1003,6 @@ show(`✓ ${ex.n} — ${m}min`);
 <div style={{ fontSize: 15, fontWeight: 600, marginTop: 8 }}>Tap to upload screenshot or photo</div>
 <div style={{ fontSize: 12, color: S.t3, marginTop: 4 }}>Camera or gallery · Select multiple</div>
 </div>
-{/* Barcode Lookup */}
-<div className="upzone" style={{ marginTop: 10, background: "rgba(6,182,212,0.06)", border: "1.5px dashed rgba(6,182,212,0.3)" }} onClick={() => {
-const code = prompt("Enter barcode number (UPC):");
-if (!code || !code.trim()) return;
-show("Looking up barcode...");
-fetch("https://world.openfoodfacts.org/api/v0/product/" + code.trim() + ".json")
-.then(r => r.json())
-.then(d => {
-if (d.status === 1 && d.product) {
-const p = d.product; const nm = p.product_name || "Unknown Item"; const nu = p.nutriments || {};
-const cal = Math.round(nu["energy-kcal_serving"] || nu["energy-kcal_100g"] || 0);
-const pro = Math.round(nu.proteins_serving || nu.proteins_100g || 0);
-const carb = Math.round(nu.carbohydrates_serving || nu.carbohydrates_100g || 0);
-const fat = Math.round(nu.fat_serving || nu.fat_100g || 0);
-setFoods(prev => [...prev, { n: nm, c: cal, p: pro, cb: carb, f: fat, i: String.fromCodePoint(0x1F3F7), time: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) }]);
-show("Logged " + nm + " (" + cal + " cal)");
-} else { show("Product not found."); }
-}).catch(() => show("Lookup failed."));
-}}>
-<div style={{ fontSize: 32 }}>{String.fromCodePoint(0x1F3F7)}</div>
-<div style={{ fontSize: 14, fontWeight: 600, marginTop: 6, color: S.cyan }}>Enter Barcode / UPC</div>
-<div style={{ fontSize: 11, color: S.t3, marginTop: 2 }}>Lookup nutrition via OpenFoodFacts</div>
-</div>
-
 <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }}
 onChange={(e) => {
 const files = Array.from(e.target.files || []);
@@ -1159,10 +1054,10 @@ text: `Health context: ${JSON.stringify(ctx)}\n\nRequest: ${aiText || "Analyze a
 });
 
 try {
-const PROXY = "https://zestful-education-production-88e7.up.railway.app";
-const res = await fetch(`${PROXY}/ai/analyze`, {
+const res = await fetch("https://api.anthropic.com/v1/messages", {
 method: "POST", headers: { "Content-Type": "application/json" },
 body: JSON.stringify({
+model: "claude-sonnet-4-20250514", max_tokens: 1500,
 system: `You are VitalCommand AI for Scott Watkins (58, lost 70+lbs 280→${wt || 210}). He trains full-body strength + cardio with kettlebells, barbells, assault bike, rower, elliptical. Tracks WHOOP, Garmin, Withings scale, CPAP/myAir. Protein goal 200g/day, 2000 cal/day.
 
 CRITICAL: When analyzing device screenshots, ALWAYS start your response with a JSON block wrapped in \`\`\`json ... \`\`\` containing ALL extracted metrics. Use these exact keys (omit any you can't find):
@@ -1233,7 +1128,7 @@ setAiResp("Connection error. Check your network and try again.");
 }
 setAiLoading(false);
 }}>
-{aiLoading ? "✨ Analyzing..." : "✨ Analyze with AI"}
+{aiLoading ? "🧠 Analyzing..." : "🧠 Analyze with AI"}
 </button>
 
 <textarea value={aiText} onChange={e => setAiText(e.target.value)}
@@ -1336,7 +1231,7 @@ onClick={() => setAiExtracted(null)}>Skip</button>
 <span style={{ fontSize: 20, color: S.t3 }}>→</span>
 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 28, fontWeight: 800, color: S.green }}>{wt || "210"}</span>
 </div>
-<div style={{ fontSize: 13, color: S.green, fontWeight: 700, marginTop: 6 }}>↓ {(280 - (parseFloat(wt) || 210)).toFixed(1)} lbs lost</div>
+<div style={{ fontSize: 13, color: S.green, fontWeight: 700, marginTop: 6 }}>↓ {280 - (parseFloat(wt) || 210)} lbs lost</div>
 <div style={{ fontSize: 12, color: S.t3, marginTop: 4 }}>Next: 199 (Onederland!) 🎯</div>
 </div>
 <div className="stat" style={{ marginBottom: 10 }}>
@@ -1379,7 +1274,7 @@ show("✓ Today's logs cleared");
 }}>Clear Today's Food & Workout Log</button>
 <button className="btn" style={{ background: "rgba(239,68,68,0.05)", color: S.red, border: `1.5px solid rgba(239,68,68,0.15)` }}
 onClick={async () => {
-if (confirm("Reset ALL data including metrics, food log, workouts, and BP?") && confirm("This CANNOT be undone. Are you absolutely sure?")) {
+if (confirm("Reset ALL data including metrics? This cannot be undone.")) {
 try { await window.storage.delete("vciq-data"); } catch(e) {}
 setFoods([]); setWkts([]); setBp([]);
 setWt("213.8"); setBf("39.4"); setMm("165.8"); setVf("8");
@@ -1398,7 +1293,7 @@ show("✓ All data reset");
 {[
 { id: "home", icon: "🏠", label: "Home" },
 { id: "food", icon: "🍽️", label: "Food" },
-{ id: "ai", icon: "✨", label: "" },
+{ id: "ai", icon: "🧠", label: "" },
 { id: "train", icon: "🏋️", label: "Train" },
 { id: "more", icon: "📊", label: "More" },
 ].map(n => (
