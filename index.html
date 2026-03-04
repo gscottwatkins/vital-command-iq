@@ -1452,7 +1452,7 @@ onClick={() => setPlanOpen(p => !p)}>
 <div className="stat"><div className="stat-label">Steps</div><div className="stat-val">{steps ? parseInt(steps).toLocaleString() : "--"}</div></div>
 <div className="stat"><div className="stat-label">Cardio</div><div className="stat-val">{workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.mins, 0) || "--"}<span className="stat-unit"> min</span></div></div>
 <div className="stat"><div className="stat-label">Strength</div><div className="stat-val">{workouts.filter(w => w.type === "strength").length || "--"}<span className="stat-unit"> exs</span></div></div>
-<div className="stat"><div className="stat-label">Calories</div><div className="stat-val">{(tWoCal + (parseInt(caloriesBurned) || 0)) || "--"}<span className="stat-unit"> cal</span></div></div>
+<div className="stat"><div className="stat-label">Calories</div><div className="stat-val">{caloriesBurned ? parseInt(caloriesBurned).toLocaleString() : (tWoCal || "--")}<span className="stat-unit"> cal</span></div></div>
 </div>
 {workouts.filter(w => w.type === "strength" && w.sets && w.sets.length > 0).length > 0 && (
 <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${S.border}`, display: "flex", gap: 16, flexWrap: "wrap" }}>
