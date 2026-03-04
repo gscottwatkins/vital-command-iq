@@ -2640,7 +2640,7 @@ onClick={() => setUserProfile(p => ({...p, sex: s}))}>{s === "male" ? "♂ Male"
 </div>
 
 <div className="sg" style={{ marginBottom: 12 }}>
-<div><div className="inp-label">Height</div><input className="inp" style={{ textAlign: "left", fontSize: 16 }} placeholder='e.g. 5\'10"' value={userProfile.height || ""} onChange={e => setUserProfile(p => ({...p, height: e.target.value}))} /></div>
+<div><div className="inp-label">Height</div><input className="inp" style={{ textAlign: "left", fontSize: 16 }} placeholder="e.g. 5ft 10in" value={userProfile.height || ""} onChange={e => setUserProfile(p => ({...p, height: e.target.value}))} /></div>
 <div><div className="inp-label">Start Weight (lbs)</div><input className="inp" type="number" inputMode="numeric" value={userProfile.startWeight || "280"} onChange={e => setUserProfile(p => ({...p, startWeight: e.target.value}))} /></div>
 </div>
 
