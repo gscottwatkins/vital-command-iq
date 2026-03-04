@@ -2472,6 +2472,7 @@ onClick={() => setCoachOpen(false)}>✕</button>
   { label: "What Should I Do?", q: `Based on recovery ${rec}%, HRV ${hrv}ms, strain so far ${strain}, sleep ${sleepHours || slp} hours, and the fact that I've done ${workouts.length} exercises today (${workouts.map(w => w.name).join(", ") || "none"}), what should my next workout be? Factor in my medications: ${meds.map(m => m.name + " " + m.dose + " on " + m.day + "s").join(", ")}. Today is ${new Date().toLocaleDateString("en-US", { weekday: "long" })}.` },
   { label: "Sauna/Plunge Tips", q: `Given my recovery at ${rec}%, HRV ${hrv}ms, and today's strain ${strain}, should I do infrared sauna, cold plunge, both, or neither today? How long for each? What order? I'm ${userProfile.age} years old with a resting HR of ${rhr} bpm.` },
   { label: "Med Check", q: `Review my current medications and their impact on my training: ${meds.map(m => m.name + " " + m.dose + " " + m.freq + " (" + m.day + ") - " + m.notes).join("; ")}. Today is ${new Date().toLocaleDateString("en-US", { weekday: "long" })}. How do these affect my workout today? Any timing considerations?` },
+  { label: "Weight Goal", q: `I'm currently ${wt || "213"} lbs, target is ${targetWeight || "200"} lbs (started at ${userProfile.startWeight || 280}). I've lost ${((parseFloat(userProfile.startWeight) || 280) - (parseFloat(wt) || 213)).toFixed(1)} lbs so far and have ${((parseFloat(wt) || 213) - (parseFloat(targetWeight) || 200)).toFixed(1)} lbs to go. Today I ate ${tCal} cal / ${tPro}g protein (goals: ${goalCal} cal / ${goalPro}g protein). My recovery is ${rec}%, strain ${strain}. Give me specific, actionable strategies to hit my target weight — what should I adjust with nutrition timing, meal composition, deficit management, and exercise? Be specific about calorie targets and protein timing for my situation.` },
 ].map(t => (
 <button key={t.label} style={{ padding: "8px 14px", borderRadius: 20, background: "rgba(0,212,170,0.08)", border: "1px solid rgba(0,212,170,0.2)", color: S.green, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
 onClick={async () => {
@@ -2479,7 +2480,7 @@ onClick={async () => {
   try {
     const coachCtx = { weight: wt, bodyFat: bf, muscle: mm, recovery: rec, hrv, strain, sleep: sleepHours || slp, rhr, spo2, steps, caloriesBurned, nutrition: { cal: tCal, protein: tPro, carbs: tCarb, fat: tFat }, workouts: workouts.map(w => w.name + " " + w.mins + "m"), medications: meds.map(m => m.name + " " + m.dose + " " + m.freq + " (" + m.day + ")"), profile: userProfile };
     const res = await fetch("https://zestful-education-production-88e7.up.railway.app/ai/analyze", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
-      system: `You are the VitalCommand IQ Coach — a personal health intelligence AI for a ${userProfile.age}-year-old ${userProfile.sex}. ${userProfile.conditions.length ? "Health conditions: " + userProfile.conditions.join(", ") + "." : ""} Medications: ${meds.map(m => m.name + " " + m.dose + " " + m.freq + " on " + m.day + " — " + m.notes).join("; ")}. Speak conversationally like a knowledgeable personal trainer who also understands pharmacology. Use bold for key metrics. Be specific with numbers. Keep responses under 300 words. Include recovery modality guidance (sauna, cold plunge) when relevant.`,
+      system: `You are the VitalCommand IQ Coach — a personal health intelligence AI for a ${userProfile.age}-year-old ${userProfile.sex}. ${userProfile.conditions.length ? "Health conditions: " + userProfile.conditions.join(", ") + "." : ""} Medications: ${meds.map(m => m.name + " " + m.dose + " " + m.freq + " on " + m.day + " — " + m.notes).join("; ")}. Current weight: ${wt || "unknown"} lbs, target weight: ${targetWeight || "unknown"} lbs, start weight: ${userProfile.startWeight || 280} lbs (lost ${((parseFloat(userProfile.startWeight) || 280) - (parseFloat(wt) || 210)).toFixed(1)} lbs so far, ${((parseFloat(wt) || 210) - (parseFloat(targetWeight) || 200)).toFixed(1)} lbs to go). Fitness goal: ${fitnessGoal}. Daily targets: ${goalCal} cal, ${goalPro}g protein. Always include specific, actionable suggestions for hitting weight goal when relevant — nutrition timing, deficit strategies, protein optimization, and exercise recommendations. Speak conversationally like a knowledgeable personal trainer who also understands pharmacology. Use bold for key metrics. Be specific with numbers. Keep responses under 300 words. Include recovery modality guidance (sauna, cold plunge) when relevant.`,
       messages: [{ role: "user", content: "Health data: " + JSON.stringify(coachCtx) + "\n\n" + t.q }]
     }) });
     const data = await res.json();
@@ -2493,22 +2494,24 @@ onClick={async () => {
 )}
 </div>
 
-<div className="brain" onClick={() => { setCoachOpen(true); if (!coachResp && !coachLoading) { /* just open panel */ } }} style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: 1, color: "#0b1120" }}>IQ</div>
+{/* IQ Coach floating button removed - now in bottom nav */}
 
-<div className="bnav" style={{ position: "relative" }}>
+<div className="bnav" style={{ display: "flex", alignItems: "center" }}>
+<div style={{ display: "flex", flex: 1, justifyContent: "space-evenly", maxWidth: "calc(100% - 70px)" }}>
 {[
 { id: "home", icon: "🏠", label: "Home" },
 { id: "food", icon: "🍽️", label: "Food" },
 { id: "train", icon: "🏋️", label: "Train" },
 { id: "more", icon: "📊", label: "More" },
 ].map(n => (
-<div key={n.id} className={`bnav-item ${tab === n.id ? "on" : ""}`} onClick={() => setTab(n.id)} style={{ flex: "0 1 auto", padding: "8px 14px" }}>
+<div key={n.id} className={`bnav-item ${tab === n.id ? "on" : ""}`} onClick={() => setTab(n.id)} style={{ flex: "none", padding: "8px 12px" }}>
 <div className="bnav-icon">{n.icon}</div>
 <div className="bnav-label">{n.label}</div>
 </div>
 ))}
-<div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", paddingRight: 14, paddingLeft: 6 }}>
-<div onClick={() => setTab("ai")} style={{ width: 46, height: 46, borderRadius: "50%", background: tab === "ai" ? "linear-gradient(135deg, #00d4aa, #00b4d8)" : "rgba(0,212,170,0.1)", border: tab === "ai" ? "2px solid #00d4aa" : "2px solid rgba(0,212,170,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 12px rgba(0,212,170,0.25)", transition: "all 0.2s", marginTop: -8 }}>
+</div>
+<div style={{ flex: "none", paddingRight: 16 }}>
+<div onClick={() => setTab("ai")} style={{ width: 46, height: 46, borderRadius: "50%", background: tab === "ai" ? "linear-gradient(135deg, #00d4aa, #00b4d8)" : "rgba(0,212,170,0.1)", border: tab === "ai" ? "2px solid #00d4aa" : "2px solid rgba(0,212,170,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 12px rgba(0,212,170,0.25)", transition: "all 0.2s" }}>
 <span style={{ fontWeight: 900, fontSize: 15, color: tab === "ai" ? "#0b1120" : S.green, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: 0.5 }}>IQ</span>
 </div>
 </div>
@@ -2616,7 +2619,7 @@ setMedModal(false);
 <div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) setAccountModal(false); }}>
 <div className="modal">
 <div className="modal-bar" />
-<div className="modal-title">👤 Account Settings</div>
+<div className="modal-title">👤 Account & Health Profile</div>
 
 <div className="inp-label">Display Name</div>
 <input className="inp" style={{ textAlign: "left", fontSize: 16, marginBottom: 10 }} value={userProfile.name || user?.user_metadata?.display_name || ""} onChange={e => setUserProfile(p => ({...p, name: e.target.value}))} />
@@ -2637,12 +2640,72 @@ onClick={() => setUserProfile(p => ({...p, sex: s}))}>{s === "male" ? "♂ Male"
 </div>
 
 <div className="sg" style={{ marginBottom: 12 }}>
-<div><div className="inp-label">Height (in)</div><input className="inp" type="number" inputMode="numeric" value={userProfile.height || ""} onChange={e => setUserProfile(p => ({...p, height: e.target.value}))} /></div>
-<div><div className="inp-label">Start Weight</div><input className="inp" type="number" inputMode="numeric" value={userProfile.startWeight || "280"} onChange={e => setUserProfile(p => ({...p, startWeight: e.target.value}))} /></div>
+<div><div className="inp-label">Height</div><input className="inp" style={{ textAlign: "left", fontSize: 16 }} placeholder='e.g. 5\'10"' value={userProfile.height || ""} onChange={e => setUserProfile(p => ({...p, height: e.target.value}))} /></div>
+<div><div className="inp-label">Start Weight (lbs)</div><input className="inp" type="number" inputMode="numeric" value={userProfile.startWeight || "280"} onChange={e => setUserProfile(p => ({...p, startWeight: e.target.value}))} /></div>
 </div>
+
+<div className="sg" style={{ marginBottom: 12 }}>
+<div><div className="inp-label">Target Weight (lbs)</div><input className="inp" type="number" inputMode="numeric" value={targetWeight || ""} onChange={e => setTargetWeight(e.target.value)} /></div>
+<div><div className="inp-label">Current Weight</div><div className="inp" style={{ background: "rgba(0,212,170,0.06)", borderColor: S.green, color: S.green, fontWeight: 800 }}>{wt || "--"} lbs</div></div>
+</div>
+
+{wt && targetWeight && <div style={{ padding: "10px 14px", background: "rgba(0,212,170,0.06)", borderRadius: 12, marginBottom: 14, fontSize: 15, color: S.t2 }}>
+{parseFloat(wt) > parseFloat(targetWeight) ? (
+<span>📉 <b style={{ color: S.green }}>{(parseFloat(wt) - parseFloat(targetWeight)).toFixed(1)} lbs</b> to go! Down <b style={{ color: S.cyan }}>{(parseFloat(userProfile.startWeight || 280) - parseFloat(wt)).toFixed(1)} lbs</b> from start.</span>
+) : (
+<span>🎯 <b style={{ color: S.green }}>At or below target!</b> Keep it up!</span>
+)}
+</div>}
 
 <div className="inp-label">Health Conditions</div>
 <input className="inp" style={{ textAlign: "left", fontSize: 14, marginBottom: 14 }} placeholder="e.g. sleep apnea, hypertension" value={(userProfile.conditions || []).join(", ")} onChange={e => setUserProfile(p => ({...p, conditions: e.target.value.split(",").map(c => c.trim()).filter(Boolean)}))} />
+
+{/* ── Medications Section ── */}
+<div style={{ borderTop: "1px solid " + S.border, paddingTop: 14, marginTop: 4, marginBottom: 14 }}>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+<div style={{ fontSize: 16, fontWeight: 800 }}>💊 Medications</div>
+<button style={{ background: "rgba(168,85,247,0.1)", color: S.purple, border: "1.5px solid rgba(168,85,247,0.3)", borderRadius: 10, padding: "6px 12px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+onClick={() => { setMedForm({ name: "", dose: "", freq: "daily", day: "Daily", time: "08:00", type: "pill", notes: "" }); setMedModal(true); setAccountModal(false); }}>+ Add</button>
+</div>
+{meds.length === 0 && <div style={{ fontSize: 14, color: S.t3, marginBottom: 10 }}>No medications added</div>}
+{meds.map((m, i) => (
+<div key={i} style={{ background: "rgba(168,85,247,0.06)", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 12, padding: "10px 14px", marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+<div>
+<div style={{ fontSize: 15, fontWeight: 800 }}>{m.name}</div>
+<div style={{ fontSize: 13, color: S.purple }}>{m.dose} · {m.type} · {m.freq}</div>
+</div>
+<button style={{ background: "none", border: "none", color: S.t3, fontSize: 18, cursor: "pointer", padding: "4px 8px" }}
+onClick={() => { if (confirm("Remove " + m.name + "?")) setMeds(p => p.filter((_, j) => j !== i)); }}>×</button>
+</div>
+))}
+</div>
+
+{/* ── Bloodwork Section ── */}
+<div style={{ borderTop: "1px solid " + S.border, paddingTop: 14, marginBottom: 14 }}>
+<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+<div style={{ fontSize: 16, fontWeight: 800 }}>🩸 Bloodwork</div>
+<div style={{ fontSize: 14, color: S.t3 }}>{bloodwork.length > 0 ? bloodwork.length + " test" + (bloodwork.length > 1 ? "s" : "") : "None"}</div>
+</div>
+{bloodwork.length > 0 && (() => {
+const latest = bloodwork[bloodwork.length - 1];
+const testDate = new Date(latest.date);
+const daysSince = Math.floor((Date.now() - testDate.getTime()) / (1000 * 60 * 60 * 24));
+return <div style={{ fontSize: 14, color: daysSince > 365 ? S.red : S.t3, marginBottom: 8 }}>Last: {testDate.toLocaleDateString()} ({daysSince}d ago){daysSince > 180 ? " — schedule updated labs" : ""}</div>;
+})()}
+{bloodwork.length > 0 && bloodwork.slice(-1).map((bw, bi) => (
+<div key={bi} style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+{Object.entries(bw.markers || {}).slice(0, 8).map(([key, val]) => {
+const RANGES = { glucose: [70,100], a1c: [0,5.7], testosterone: [300,1000], total_cholesterol: [0,200], ldl: [0,100], hdl: [40,999], triglycerides: [0,150], tsh: [0.4,4.0], psa: [0,4] };
+const range = RANGES[key];
+const v = parseFloat(val);
+const ok = !range || (v >= range[0] && v <= range[1]);
+return <span key={key} className={`bw-marker ${ok ? "bw-normal" : "bw-flag"}`}>{key.replace(/_/g, " ")}: {val}</span>;
+})}
+{Object.keys(bw.markers || {}).length > 8 && <span style={{ fontSize: 13, color: S.t3 }}>+{Object.keys(bw.markers).length - 8} more</span>}
+</div>
+))}
+<div style={{ fontSize: 14, color: S.t3 }}>Upload bloodwork PDF on the IQ tab for AI extraction</div>
+</div>
 
 <button className="btn btn-g" onClick={() => { show("✓ Profile saved"); setAccountModal(false); }}>Save Profile</button>
 
