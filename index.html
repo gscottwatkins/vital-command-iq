@@ -23,7 +23,7 @@
 // Load Supabase via ESM (official recommended approach)
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 window.__sb = createClient(
-  "https://agmypeqmmclhechnnrlv.supabase.co",
+  "https://agmypeqmmclhecnnrilv.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnbXlwZXFtbWNsaGVjaG5ucmlsdiIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzcyNTgwMTYwLCJleHAiOjIwODgxNTYxNjB9.zyi6oOjHBsepmYDjB4mnlbJAmHD25E1dcX6NvNRzDzM"
 );
 console.log("[VitalCommand] Supabase ready via ESM");
@@ -33,13 +33,12 @@ const babelScript = document.querySelector('script[data-type="text/babel"]');
 if (babelScript && window.Babel) {
   try {
     const compiled = window.Babel.transform(babelScript.textContent, {
-      presets: ["react"],
-      plugins: ["proposal-optional-chaining", "proposal-nullish-coalescing-operator"]
+      presets: ["env", "react"]
     }).code;
     const runScript = document.createElement("script");
     runScript.textContent = compiled;
     document.body.appendChild(runScript);
-  } catch(e) { console.error("[VitalCommand] Babel compile error:", e); }
+  } catch(e) { console.error("[VitalCommand] Babel compile error:", e); document.getElementById("root").innerHTML = '<div style="color:#ef4444;padding:40px;font-family:sans-serif"><h2>Build Error</h2><pre>'+e.message+'</pre></div>'; }
 }
 </script>
 <script data-type="text/babel">
