@@ -409,6 +409,7 @@ const [spo2, setSpo2] = useState("");
 const [avgHr, setAvgHr] = useState("");
 const [maxHr, setMaxHr] = useState("");
 const [sleepHours, setSleepHours] = useState("");
+const [sleepScore, setSleepScore] = useState("");
 const [caloriesBurned, setCaloriesBurned] = useState("");
 
 // Sync state
@@ -576,7 +577,8 @@ if (d.spo2 != null) setSpo2(String(d.spo2));
 if (d.avg_hr != null) setAvgHr(String(d.avg_hr));
 if (d.max_hr != null) setMaxHr(String(d.max_hr));
 if (d.calories_burned != null) setCaloriesBurned(String(d.calories_burned));
-if (d.sleep_score != null) setRec(String(d.sleep_score));
+// sleep_score is sleep performance %, NOT recovery — don't overwrite recovery
+if (d.sleep_score != null) setSleepScore(String(d.sleep_score));
 setWhoopStatus("saved");
 whoopOk = true;
 console.log("[WHOOP] Synced:", d);
@@ -1512,6 +1514,7 @@ onClick={() => setPlanOpen(p => !p)}>
 <div className="stat"><div className="stat-label">Resting HR</div><div className="stat-val">{rhr || "--"}<span className="stat-unit"> bpm</span></div></div>
 <div className="stat"><div className="stat-label">SpO2</div><div className="stat-val">{spo2 || "--"}<span className="stat-unit">%</span></div></div>
 <div className="stat"><div className="stat-label">Sleep</div><div className="stat-val">{sleepHours || slp || "--"}<span className="stat-unit"> hrs</span></div></div>
+<div className="stat"><div className="stat-label">Sleep Score</div><div className="stat-val">{sleepScore || "--"}<span className="stat-unit">%</span></div></div>
 <div className="stat"><div className="stat-label">Strain</div><div className="stat-val">{strain || "--"}<span className="stat-unit"> /21</span></div></div>
 </div>
 {(avgHr || caloriesBurned) && (
@@ -1676,7 +1679,7 @@ onClick={() => setModal("ai_workout")}>
 </div>
 <div className="card card-sm" style={{ margin: 0 }}>
 <div className="stat-label">Est. Calories</div>
-<div className="stat-val">{tWoCal}<span className="stat-unit"> cal</span></div>
+<div className="stat-val">{caloriesBurned ? parseInt(caloriesBurned).toLocaleString() : tWoCal}<span className="stat-unit"> cal</span></div>
 </div>
 <div className="card card-sm" style={{ margin: 0 }}>
 <div className="stat-label">Exercises</div>
