@@ -23,6 +23,27 @@
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
+// ── Expandable Card Component ──
+function Exp({ icon, title, badge, badgeColor, preview, children, defaultOpen = false, borderColor }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="card" style={borderColor ? { borderLeft: "3px solid " + borderColor } : {}}>
+      <div className="exp-hdr" onClick={() => setOpen(o => !o)}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+          {icon && <span style={{ fontSize: 22 }}>{icon}</span>}
+          <span style={{ fontSize: 18, fontWeight: 700 }}>{title}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {badge && <div className="card-badge" style={{ background: (badgeColor || "rgba(0,212,170,0.12)"), color: badgeColor ? undefined : "#00d4aa" }}>{badge}</div>}
+          <span className={"exp-arrow" + (open ? " open" : "")}>▸</span>
+        </div>
+      </div>
+      {preview && <div className={"exp-preview" + (open ? " collapsed" : "")}>{preview}</div>}
+      <div className={"exp-body" + (open ? " open" : "")}>{children}</div>
+    </div>
+  );
+}
+
 // ── Supabase Client (UMD loaded synchronously above) ──
 const sb = (function() {
   try {
@@ -82,7 +103,7 @@ function AuthScreen({ onAuth }) {
           React.createElement("span", null, "Command"),
           React.createElement("span", { style: { color: S.cyan, marginLeft: 4 } }, "IQ")
         ),
-        React.createElement("div", { style: { fontSize: 13, color: S.t3, marginTop: 8 } }, "Personal Health Intelligence")
+        React.createElement("div", { style: { fontSize: 15, color: S.t3, marginTop: 8 } }, "Personal Health Intelligence")
       ),
       // Card
       React.createElement("div", { style: { background: S.card, borderRadius: 20, padding: 28, border: `1px solid ${S.border}` } },
@@ -91,7 +112,7 @@ function AuthScreen({ onAuth }) {
         mode === "signup" && React.createElement("input", { type: "text", placeholder: "Your name", value: name, onChange: e => setName(e.target.value), style: { width: "100%", height: 48, background: "rgba(255,255,255,0.04)", border: `1.5px solid ${S.border}`, borderRadius: 12, padding: "0 14px", color: S.t1, fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 10, boxSizing: "border-box" } }),
         React.createElement("input", { type: "email", placeholder: "Email", value: email, onChange: e => setEmail(e.target.value), style: { width: "100%", height: 48, background: "rgba(255,255,255,0.04)", border: `1.5px solid ${S.border}`, borderRadius: 12, padding: "0 14px", color: S.t1, fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 10, boxSizing: "border-box" } }),
         React.createElement("input", { type: "password", placeholder: "Password", value: pass, onChange: e => setPass(e.target.value), onKeyDown: e => { if (e.key === "Enter") handleSubmit(); }, style: { width: "100%", height: 48, background: "rgba(255,255,255,0.04)", border: `1.5px solid ${S.border}`, borderRadius: 12, padding: "0 14px", color: S.t1, fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 16, boxSizing: "border-box" } }),
-        err && React.createElement("div", { style: { color: "#ef4444", fontSize: 13, marginBottom: 12, fontWeight: 600 } }, err),
+        err && React.createElement("div", { style: { color: "#ef4444", fontSize: 15, marginBottom: 12, fontWeight: 600 } }, err),
         React.createElement("button", { onClick: handleSubmit, disabled: loading, style: { width: "100%", height: 52, background: `linear-gradient(135deg, ${S.green}, ${S.cyan})`, border: "none", borderRadius: 14, color: "#0b1120", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: loading ? 0.6 : 1 } }, loading ? "..." : mode === "login" ? "Sign In" : "Create Account"),
         React.createElement("div", { style: { textAlign: "center", marginTop: 16, fontSize: 14, color: S.t3 } },
           mode === "login" ? "Don't have an account? " : "Already have an account? ",
@@ -341,7 +362,7 @@ style={{ transition: "stroke-dashoffset 0.5s ease" }} />
 <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 800, color }}>{val}</div>
 </div>
 </div>
-<div style={{ fontSize: 11, color: S.t2, fontWeight: 700, marginTop: 4, letterSpacing: 0.5 }}>{label}</div>
+<div style={{ fontSize: 15, color: S.t2, fontWeight: 700, marginTop: 4, letterSpacing: 0.5 }}>{label}</div>
 </div>
 );
 };
@@ -400,6 +421,7 @@ const [avgHr, setAvgHr] = useState("");
 const [maxHr, setMaxHr] = useState("");
 const [sleepHours, setSleepHours] = useState("");
 const [sleepScore, setSleepScore] = useState("");
+const [respRate, setRespRate] = useState("");
 const [caloriesBurned, setCaloriesBurned] = useState("");
 
 // Sync state
@@ -569,6 +591,7 @@ if (d.max_hr != null) setMaxHr(String(d.max_hr));
 if (d.calories_burned != null) setCaloriesBurned(String(d.calories_burned));
 // sleep_score is sleep performance %, NOT recovery — don't overwrite recovery
 if (d.sleep_score != null) setSleepScore(String(d.sleep_score));
+if (d.respiratory_rate != null) setRespRate(String(parseFloat(d.respiratory_rate).toFixed(1)));
 setWhoopStatus("saved");
 whoopOk = true;
 console.log("[WHOOP] Synced:", d);
@@ -783,7 +806,7 @@ const CoachCard = ({ text, onDismiss, title = "AI Coach", icon = "✨" }) => {
         React.createElement("span", { style: { fontSize: 14, fontWeight: 800, color: S.green, letterSpacing: 1, textTransform: "uppercase" } }, title)
       ),
       onDismiss && React.createElement("button", {
-        style: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: S.t3, fontSize: 13, padding: "4px 10px", cursor: "pointer" },
+        style: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: S.t3, fontSize: 15, padding: "4px 10px", cursor: "pointer" },
         onClick: onDismiss
       }, "✕")
     ),
@@ -945,7 +968,7 @@ return { text: lines.join("\n"), color };
 const css = `
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-body { font-family:'Plus Jakarta Sans',sans-serif; background:${S.bg}; color:${S.t1}; overflow-x:hidden; }
+body { font-family:'Plus Jakarta Sans',sans-serif; background:${S.bg}; color:${S.t1}; overflow-x:hidden; font-size:16px; }
 input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
 input[type=number] { -moz-appearance:textfield; }
 
@@ -990,36 +1013,36 @@ input[type=number] { -moz-appearance:textfield; }
 .hdr-icon { width:36px; height:36px; border-radius:50%; background:rgba(0,229,199,0.08); border:1px solid rgba(0,229,199,0.15); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 @media(min-width:768px) { .hdr-icon { width:44px; height:44px; } }
 @media(min-width:1024px) { .hdr-icon { width:48px; height:48px; } }
-.date { font-size:12px; color:${S.t2}; margin-top:2px; }
-.av { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,${S.cyan},${S.green}); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; }
+.date { font-size:14px; color:${S.t2}; margin-top:2px; }
+.av { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,${S.cyan},${S.green}); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; }
 
 .card { background:${S.card}; border:1px solid ${S.border}; border-radius:16px; padding:18px; margin-bottom:14px; }
 .card-sm { padding:14px; margin-bottom:10px; }
 .card-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-.card-title { font-size:16px; font-weight:700; display:flex; align-items:center; gap:10px; }
-.card-badge { font-size:12px; font-weight:700; padding:4px 10px; border-radius:20px; font-family:'JetBrains Mono',monospace; }
-.card-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.card-title { font-size:18px; font-weight:700; display:flex; align-items:center; gap:10px; }
+.card-badge { font-size:14px; font-weight:700; padding:5px 12px; border-radius:20px; font-family:'JetBrains Mono',monospace; }
+.card-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; }
 
-.sec { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; color:${S.t2}; letter-spacing:2px; text-transform:uppercase; padding:20px 0 10px; }
+.sec { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; color:${S.t2}; letter-spacing:2px; text-transform:uppercase; padding:20px 0 10px; }
 
 .sg { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .stat { background:rgba(255,255,255,0.03); border:1px solid ${S.border}; border-radius:14px; padding:14px; }
-.stat-label { font-size:11px; color:${S.t2}; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
-.stat-val { font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:800; margin-top:4px; line-height:1.1; }
-.stat-val.med { font-size:22px; }
-.stat-unit { font-size:13px; color:${S.t2}; font-weight:500; }
-.stat-sub { font-size:11px; margin-top:4px; font-weight:600; }
+.stat-label { font-size:13px; color:${S.t2}; font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+.stat-val { font-family:'JetBrains Mono',monospace; font-size:32px; font-weight:800; margin-top:4px; line-height:1.1; }
+.stat-val.med { font-size:24px; }
+.stat-unit { font-size:15px; color:${S.t2}; font-weight:500; }
+.stat-sub { font-size:13px; margin-top:4px; font-weight:600; }
 
 .actions { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; padding:0; }
 .act { background:${S.card}; border:1px solid ${S.border}; border-radius:16px; padding:18px 8px; text-align:center; cursor:pointer; transition:all 0.15s; min-height:88px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
 .act:active { transform:scale(0.95); background:rgba(0,212,170,0.08); border-color:${S.green}; }
-.act-icon { font-size:28px; }
-.act-label { font-size:13px; font-weight:700; }
+.act-icon { font-size:30px; }
+.act-label { font-size:15px; font-weight:700; }
 
 .bnav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); max-width:500px; width:100%; background:rgba(11,17,32,0.96); backdrop-filter:blur(20px); border-top:1px solid ${S.border}; display:flex; z-index:100; padding:8px 0 max(10px, env(safe-area-inset-bottom)); }
 .bnav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px; cursor:pointer; transition:all 0.15s; }
-.bnav-icon { font-size:24px; opacity:0.4; transition:all 0.15s; }
-.bnav-label { font-size:10px; font-weight:700; color:${S.t3}; transition:all 0.15s; }
+.bnav-icon { font-size:26px; opacity:0.4; transition:all 0.15s; }
+.bnav-label { font-size:12px; font-weight:700; color:${S.t3}; transition:all 0.15s; }
 .bnav-item.on .bnav-icon { opacity:1; }
 .bnav-item.on .bnav-label { color:${S.green}; }
 
@@ -1038,16 +1061,35 @@ input[type=number] { -moz-appearance:textfield; }
 @keyframes coachPulse { 0%,100% { opacity:0.4; transform:scale(0.8); } 50% { opacity:1; transform:scale(1.2); } }
 
 .med-card { background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.2); border-radius:14px; padding:14px; margin-bottom:8px; }
-.med-name { font-size:15px; font-weight:800; color:${S.t1}; }
-.med-dose { font-size:12px; color:${S.purple}; font-weight:700; margin-top:2px; }
-.med-sched { font-size:11px; color:${S.t3}; margin-top:4px; }
-.med-due { background:rgba(245,158,11,0.12); color:${S.orange}; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
-.med-overdue { background:rgba(239,68,68,0.12); color:${S.red}; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
+.med-name { font-size:17px; font-weight:800; color:${S.t1}; }
+.med-dose { font-size:14px; color:${S.purple}; font-weight:700; margin-top:2px; }
+.med-sched { font-size:13px; color:${S.t3}; margin-top:4px; }
+.med-due { background:rgba(245,158,11,0.12); color:${S.orange}; font-size:13px; font-weight:700; padding:3px 10px; border-radius:6px; }
+.med-overdue { background:rgba(239,68,68,0.12); color:${S.red}; font-size:13px; font-weight:700; padding:3px 10px; border-radius:6px; }
 
-.bw-marker { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:10px; font-size:12px; font-weight:700; }
+.bw-marker { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:10px; font-size:14px; font-weight:700; }
 .bw-normal { background:rgba(0,212,170,0.1); color:${S.green}; }
 .bw-flag { background:rgba(245,158,11,0.12); color:${S.orange}; }
 .bw-critical { background:rgba(239,68,68,0.12); color:${S.red}; }
+
+/* ── Expandable Cards ── */
+.exp-hdr { display:flex; align-items:center; justify-content:space-between; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.exp-hdr:active { opacity:0.8; }
+.exp-arrow { font-size:16px; color:${S.t3}; transition:transform 0.25s ease; flex-shrink:0; margin-left:8px; }
+.exp-arrow.open { transform:rotate(90deg); }
+.exp-body { overflow:hidden; transition:max-height 0.3s ease, opacity 0.25s ease; max-height:0; opacity:0; }
+.exp-body.open { max-height:2000px; opacity:1; }
+.exp-preview { transition:max-height 0.3s ease, opacity 0.25s ease; max-height:500px; opacity:1; overflow:hidden; }
+.exp-preview.collapsed { max-height:0; opacity:0; }
+
+/* ── Vertical Hourly Forecast ── */
+.hourly-vert { padding:8px 0; }
+.hourly-row { display:flex; align-items:center; gap:14px; padding:10px 0; border-bottom:1px solid ${S.border}; }
+.hourly-row:last-child { border-bottom:none; }
+.hourly-time { font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; color:${S.t2}; min-width:60px; }
+.hourly-icon { font-size:24px; min-width:32px; text-align:center; }
+.hourly-temp { font-family:'JetBrains Mono',monospace; font-size:18px; font-weight:800; min-width:45px; }
+.hourly-detail { font-size:14px; color:${S.t3}; }
 
 .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:200; display:flex; align-items:flex-end; justify-content:center; }
 .modal { background:${S.card}; border-top:2px solid ${S.green}; border-radius:24px 24px 0 0; max-width:500px; width:100%; max-height:90dvh; overflow-y:auto; padding:20px 20px 32px; animation:slideUp 0.25s ease; }
@@ -1171,8 +1213,8 @@ return (
 {r.p && <span style={{ fontSize: 14, color: S.t2, marginLeft: 10 }}>♡ {r.p}</span>}
 </div>
 <div style={{ textAlign: "right" }}>
-<div style={{ fontSize: 12, fontWeight: 700, color: cat.c }}>{cat.l}</div>
-<div style={{ fontSize: 11, color: S.t3 }}>{r.per === "morning" ? "☀️" : "🌙"} {r.t}</div>
+<div style={{ fontSize: 14, fontWeight: 700, color: cat.c }}>{cat.l}</div>
+<div style={{ fontSize: 15, color: S.t3 }}>{r.per === "morning" ? "☀️" : "🌙"} {r.t}</div>
 </div>
 </div>
 );
@@ -1364,63 +1406,73 @@ return (
 {/* ══ HOME TAB ══ */}
 {tab === "home" && (
 <div className="content">
+
+{/* ── Greeting + Weather Summary ── */}
 <div className="card" style={{ marginTop: 14 }}>
-<div style={{ fontSize: 24, fontWeight: 800 }}>
-{/* Daily Verse */}
-<div style={{ background: "linear-gradient(135deg, rgba(168,85,247,0.08), rgba(236,72,153,0.05))", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 18, padding: 18, marginBottom: 16 }}>
-<div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-<span style={{ fontSize: 18 }}>{String.fromCodePoint(0x1F4D6)}</span>
-<span style={{ fontSize: 12, fontWeight: 800, color: S.purple, letterSpacing: 1.5, textTransform: "uppercase" }}>{todayVerse.ref}</span>
-</div>
-<div style={{ fontSize: 14, lineHeight: 1.7, color: S.t1, fontStyle: "italic", marginBottom: 12 }}>{String.fromCharCode(8220)}{todayVerse.t}{String.fromCharCode(8221)}</div>
-<div style={{ fontSize: 13, fontWeight: 700, color: S.purple, paddingTop: 10, borderTop: "1px solid rgba(168,85,247,0.15)" }}>{todayVerse.d}</div>
-</div>
-
-
-
+<div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
 {greet}, <span style={{ color: S.green }}>{user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Champion"}</span> 💪
 </div>
 {weather && (
-<div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12 }}>
-<div style={{ fontSize: 42 }}>{wIcon(weather.code)}</div>
-<div><div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 36, fontWeight: 800 }}>{weather.temp}°</div></div>
+<div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+<div style={{ fontSize: 44 }}>{wIcon(weather.code)}</div>
+<div><div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 38, fontWeight: 800 }}>{weather.temp}°</div></div>
 <div style={{ flex: 1 }}>
-<div style={{ fontSize: 14, fontWeight: 600 }}>Madison · Feels {weather.feels}°</div>
-<div style={{ fontSize: 12, color: S.t2 }}>AQI <span style={{ color: S.green }}>Good</span> · UV {weather.uv} · 💧 {weather.hum}%</div>
+<div style={{ fontSize: 16, fontWeight: 600 }}>Madison · Feels {weather.feels}°</div>
+<div style={{ fontSize: 15, color: S.t2 }}>UV {weather.uv} · 💧 {weather.hum}%</div>
 </div>
 </div>
 )}
+</div>
+
+{/* ── Scripture Card (Expandable) ── */}
+<Exp icon={"\uD83D\uDCD6"} title={todayVerse.ref} borderColor={S.purple}
+  preview={<div style={{ marginTop: 10, fontSize: 16, lineHeight: 1.6, color: S.t2, fontStyle: "italic" }}>{String.fromCharCode(8220)}{todayVerse.t.slice(0, 60)}...{String.fromCharCode(8221)}</div>}>
+<div style={{ marginTop: 14, padding: 16, background: "linear-gradient(135deg, rgba(168,85,247,0.08), rgba(236,72,153,0.05))", borderRadius: 16 }}>
+<div style={{ fontSize: 18, lineHeight: 1.8, color: S.t1, fontStyle: "italic", marginBottom: 14 }}>{String.fromCharCode(8220)}{todayVerse.t}{String.fromCharCode(8221)}</div>
+<div style={{ fontSize: 17, fontWeight: 700, color: S.purple, paddingTop: 12, borderTop: "1px solid rgba(168,85,247,0.15)" }}>{todayVerse.d}</div>
+</div>
+</Exp>
+
+{/* ── Weather Forecast (Expandable) ── */}
 {weather && (
-<div className="hourly-bar">
-<div className="wh-scroll">
+<Exp icon={"🌤️"} title="Hourly Forecast" borderColor={S.cyan}
+  preview={<div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 15, color: S.t2 }}>
+    <span>UV <b style={{ color: weather.uv >= 6 ? S.orange : S.green }}>{weather.uv}</b></span>
+    <span>AQI <b style={{ color: S.green }}>Good</b></span>
+    <span>💧 {weather.hum}%</span>
+  </div>}>
+<div className="hourly-vert" style={{ marginTop: 10 }}>
 {weather.hourly.map((h, i) => (
-<div className="wh-item" key={i}>
-<div className="wh-hr">{h.hr}</div>
-<div className="wh-ic">{wIcon(h.code)}</div>
-<div className="wh-t">{h.temp}°</div>
+<div className="hourly-row" key={i}>
+<div className="hourly-time">{h.hr}</div>
+<div className="hourly-icon">{wIcon(h.code)}</div>
+<div className="hourly-temp">{h.temp}°</div>
+<div className="hourly-detail">UV {h.uv || "--"}</div>
 </div>
 ))}
 </div>
-</div>
+</Exp>
 )}
+
+{/* ── Recovery Tip ── */}
 {rec && (() => {
 const tip = aiTip();
 const lines = tip.text.split("\n");
 const headline = lines[0];
 return (
-<div style={{ marginTop: 14, padding: "14px 16px", background: `rgba(${+rec >= 67 ? "0,212,170" : +rec >= 34 ? "245,158,11" : "239,68,68"},0.06)`, border: `1px solid ${tip.color}22`, borderRadius: 14, cursor: "pointer" }}
+<div className="card" style={{ borderLeft: `3px solid ${tip.color}`, cursor: "pointer", padding: "16px 18px" }}
 onClick={() => setPlanOpen(p => !p)}>
 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-<div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-<span style={{ fontSize: 16 }}>📋</span>
-<div style={{ fontSize: 14, fontWeight: 700, color: tip.color, flex: 1 }}>{headline}</div>
+<div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1 }}>
+<span style={{ fontSize: 20 }}>📋</span>
+<div style={{ fontSize: 16, fontWeight: 700, color: tip.color, flex: 1 }}>{headline}</div>
 </div>
-<span style={{ fontSize: 14, color: S.t3, transform: planOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>▸</span>
+<span style={{ fontSize: 16, color: S.t3, transform: planOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>▸</span>
 </div>
 {planOpen && lines.length > 1 && (
-<div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${S.border}` }}>
+<div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${S.border}` }}>
 {lines.slice(1).map((line, i) => (
-<div key={i} style={{ fontSize: 13, lineHeight: 1.6, color: line.startsWith("🚫") ? S.red : line.startsWith("✅") || line.startsWith("✓") ? S.green : line.startsWith("⚠️") || line.startsWith("⚡") || line.startsWith("🚨") ? S.orange : S.t2, marginBottom: 3 }}>
+<div key={i} style={{ fontSize: 16, lineHeight: 1.7, color: line.startsWith("🚫") ? S.red : line.startsWith("✅") || line.startsWith("✓") ? S.green : line.startsWith("⚠️") || line.startsWith("⚡") || line.startsWith("🚨") ? S.orange : S.t2, marginBottom: 4 }}>
 {line}
 </div>
 ))}
@@ -1429,60 +1481,64 @@ onClick={() => setPlanOpen(p => !p)}>
 </div>
 );
 })()}
-</div>
 
+{/* ── Quick Actions ── */}
 <div className="actions">
 <div className="act" onClick={() => setTab("food")}><div className="act-icon">🍽️</div><div className="act-label">Log Food</div></div>
 <div className="act" onClick={() => setModal("weight")}><div className="act-icon">⚖️</div><div className="act-label">Log Weight</div></div>
 <div className="act" onClick={() => setModal("bp")}><div className="act-icon">❤️</div><div className="act-label">Log BP</div></div>
 <div className="act" onClick={() => setTab("train")}><div className="act-icon">🏋️</div><div className="act-label">Workout</div></div>
 <div className="act" onClick={() => setModal("sleep")}><div className="act-icon">😴</div><div className="act-label">Sleep</div></div>
-<div className="act" style={syncing ? { borderColor: S.green, background: "rgba(0,212,170,0.08)" } : {}} onClick={() => syncData(true)}><div className="act-icon">{syncing ? "⏳" : "🔄"}</div><div className="act-label">{syncing ? "Syncing..." : "Sync"}</div>{lastSync && <div style={{ fontSize: 9, color: S.t3 }}>{lastSync}</div>}</div>
+<div className="act" style={syncing ? { borderColor: S.green, background: "rgba(0,212,170,0.08)" } : {}} onClick={() => syncData(true)}><div className="act-icon">{syncing ? "⏳" : "🔄"}</div><div className="act-label">{syncing ? "Syncing..." : "Sync"}</div>{lastSync && <div style={{ fontSize: 11, color: S.t3 }}>{lastSync}</div>}</div>
 </div>
 
 <div className="sec">Today's Snapshot</div>
 
-{/* Today's Activity Card */}
-<div className="card" style={{ borderLeft: `3px solid ${S.cyan}` }}>
-<div className="card-hdr">
-<div className="card-title"><span style={{ fontSize: 20 }}>🏃</span> Today's Activity</div>
-{physioAge && <div className="card-badge" style={{ background: "rgba(6,182,212,0.12)", color: S.cyan }}>Bio Age: {physioAge}</div>}
-</div>
-<div className="sg" style={{ padding: 0 }}>
+{/* ── Activity Card (Expandable) ── */}
+<Exp icon="🏃" title="Today's Activity" borderColor={S.cyan}
+  badge={physioAge ? "Bio Age: " + physioAge : null}
+  badgeColor="rgba(6,182,212,0.12)"
+  preview={<div style={{ marginTop: 10, display: "flex", gap: 16, flexWrap: "wrap" }}>
+    <span style={{ fontSize: 15, color: S.t2 }}>Steps <b style={{ color: S.t1, fontFamily: "'JetBrains Mono',monospace" }}>{steps ? parseInt(steps).toLocaleString() : "--"}</b></span>
+    <span style={{ fontSize: 15, color: S.t2 }}>Cal <b style={{ color: S.t1, fontFamily: "'JetBrains Mono',monospace" }}>{caloriesBurned ? parseInt(caloriesBurned).toLocaleString() : (tWoCal || "--")}</b></span>
+    <span style={{ fontSize: 15, color: S.t2 }}>Cardio <b style={{ color: S.t1, fontFamily: "'JetBrains Mono',monospace" }}>{workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.mins, 0) || "--"}m</b></span>
+  </div>}>
+<div className="sg" style={{ padding: 0, marginTop: 14 }}>
 <div className="stat"><div className="stat-label">Steps</div><div className="stat-val">{steps ? parseInt(steps).toLocaleString() : "--"}</div></div>
 <div className="stat"><div className="stat-label">Cardio</div><div className="stat-val">{workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.mins, 0) || "--"}<span className="stat-unit"> min</span></div></div>
 <div className="stat"><div className="stat-label">Strength</div><div className="stat-val">{workouts.filter(w => w.type === "strength").length || "--"}<span className="stat-unit"> exs</span></div></div>
-<div className="stat"><div className="stat-label">{caloriesBurned ? "Burned (WHOOP)" : "Est. Calories"}</div><div className="stat-val">{caloriesBurned ? parseInt(caloriesBurned).toLocaleString() : (tWoCal || "--")}<span className="stat-unit"> cal</span></div></div>
+<div className="stat"><div className="stat-label">{caloriesBurned ? "Burned" : "Est. Cal"}</div><div className="stat-val">{caloriesBurned ? parseInt(caloriesBurned).toLocaleString() : (tWoCal || "--")}<span className="stat-unit"> cal</span></div></div>
 </div>
 {workouts.filter(w => w.type === "strength" && w.sets && w.sets.length > 0).length > 0 && (
-<div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${S.border}`, display: "flex", gap: 16, flexWrap: "wrap" }}>
-<div style={{ fontSize: 12, color: S.t2 }}>Volume: <span style={{ color: S.purple, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{workouts.filter(w => w.sets).reduce((s, w) => s + w.sets.reduce((ss, set) => ss + (set.reps * set.wt), 0), 0).toLocaleString()} lbs</span></div>
-<div style={{ fontSize: 12, color: S.t2 }}>Sets: <span style={{ color: S.cyan, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{workouts.filter(w => w.sets).reduce((s, w) => s + w.sets.length, 0)}</span></div>
-<div style={{ fontSize: 12, color: S.t2 }}>Exercises: <span style={{ color: S.green, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{workouts.filter(w => w.type === "strength").length}</span></div>
+<div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${S.border}`, display: "flex", gap: 16, flexWrap: "wrap" }}>
+<div style={{ fontSize: 15, color: S.t2 }}>Volume: <span style={{ color: S.purple, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{workouts.filter(w => w.sets).reduce((s, w) => s + w.sets.reduce((ss, set) => ss + (set.reps * set.wt), 0), 0).toLocaleString()} lbs</span></div>
+<div style={{ fontSize: 15, color: S.t2 }}>Sets: <span style={{ color: S.cyan, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{workouts.filter(w => w.sets).reduce((s, w) => s + w.sets.length, 0)}</span></div>
 </div>
 )}
-</div>
+</Exp>
 
-<div className="card" style={{ borderLeft: `3px solid ${S.blue}` }}>
-<div className="card-hdr">
-<div className="card-title"><span style={{ fontSize: 20 }}>⚖️</span> Body Composition</div>
-<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-<span className={`api-badge ${withingsStatus === "saved" ? "api-live" : "api-off"}`}>{withingsStatus === "saved" ? "● SAVED" : "○ —"}</span>
-<div className="card-badge" style={{ background: "rgba(0,212,170,0.12)", color: S.green }}>-{(280 - (parseFloat(wt) || 210)).toFixed(1)} Lbs</div>
-</div>
-</div>
-<div className="sg" style={{ padding: 0 }}>
+{/* ── Body Composition (Expandable) ── */}
+<Exp icon="⚖️" title="Body Composition" borderColor={S.blue}
+  badge={"-" + (280 - (parseFloat(wt) || 210)).toFixed(1) + " Lbs"}
+  badgeColor="rgba(0,212,170,0.12)"
+  preview={<div style={{ marginTop: 10, display: "flex", gap: 16, flexWrap: "wrap" }}>
+    <span style={{ fontSize: 15, color: S.t2 }}>Wt <b style={{ color: S.t1, fontFamily: "'JetBrains Mono',monospace" }}>{wt || "--"}</b></span>
+    <span style={{ fontSize: 15, color: S.t2 }}>Muscle <b style={{ color: S.t1, fontFamily: "'JetBrains Mono',monospace" }}>{mm || "--"}</b></span>
+    <span style={{ fontSize: 15, color: S.t2 }}>BF <b style={{ color: S.t1, fontFamily: "'JetBrains Mono',monospace" }}>{bf || "--"}%</b></span>
+  </div>}>
+<div className="sg" style={{ padding: 0, marginTop: 14 }}>
 <div className="stat"><div className="stat-label">Weight</div><div className="stat-val">{wt || "--"}<span className="stat-unit"> lbs</span></div></div>
 <div className="stat"><div className="stat-label">Muscle Mass</div><div className="stat-val">{mm || "--"}<span className="stat-unit"> lbs</span></div></div>
 <div className="stat"><div className="stat-label">Visceral Fat</div><div className="stat-val">{vf || "--"}</div><div className="stat-sub" style={{ color: S.green }}>↓ Target: 7</div></div>
 <div className="stat"><div className="stat-label">Body Fat</div><div className="stat-val">{bf || "--"}<span className="stat-unit">%</span></div></div>
 </div>
-</div>
+</Exp>
 
+{/* ── Blood Pressure (Tap to log) ── */}
 <div className="card" style={{ borderLeft: `3px solid ${S.red}`, cursor: "pointer" }} onClick={() => setModal("bp")}>
 <div className="card-hdr">
-<div className="card-title"><span style={{ fontSize: 20 }}>❤️</span> Blood Pressure</div>
-{bp.length === 0 && <div className="card-badge" style={{ background: "rgba(245,158,11,0.12)", color: S.orange }}>Pending</div>}
+<div className="card-title"><span style={{ fontSize: 22 }}>❤️</span> Blood Pressure</div>
+{bp.length === 0 && <div className="card-badge" style={{ background: "rgba(245,158,11,0.12)", color: S.orange }}>Tap to Log</div>}
 </div>
 <div className="sg" style={{ padding: 0 }}>
 <div className="stat"><div className="stat-label">{bp.length > 0 ? `${bp[0].per === "morning" ? "AM" : "PM"} Reading` : "AM Reading"}</div><div className="stat-val med">{bp.length > 0 ? `${bp[0].s}/${bp[0].d}` : "–/–"}</div>{bp.length === 0 && <div className="stat-sub" style={{ color: S.red }}>🚨 Tap to log</div>}</div>
@@ -1490,15 +1546,17 @@ onClick={() => setPlanOpen(p => !p)}>
 </div>
 </div>
 
-<div className="card" style={{ borderLeft: `3px solid ${S.purple}` }}>
-<div className="card-hdr">
-<div className="card-title"><span style={{ fontSize: 20 }}>🌙</span> Sleep & Recovery</div>
-<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-<span className={`api-badge ${whoopStatus === "saved" ? "api-live" : "api-off"}`}>{whoopStatus === "saved" ? "● SAVED" : "○ —"}</span>
-<div className="card-badge" style={{ background: `rgba(${+rec >= 67 ? "0,212,170" : +rec >= 34 ? "245,158,11" : "239,68,68"},0.12)`, color: recColor(rec) }}>{rec || "--"}%</div>
-</div>
-</div>
-<div className="sg" style={{ padding: 0 }}>
+{/* ── Sleep & Recovery (Expandable) with Respiration ── */}
+<Exp icon="🌙" title="Sleep & Recovery" borderColor={S.purple}
+  badge={(rec || "--") + "%"}
+  badgeColor={`rgba(${+rec >= 67 ? "0,212,170" : +rec >= 34 ? "245,158,11" : "239,68,68"},0.12)`}
+  preview={<div style={{ marginTop: 10, display: "flex", gap: 14, flexWrap: "wrap" }}>
+    <span style={{ fontSize: 15, color: S.t2 }}>Recovery <b style={{ color: recColor(rec), fontFamily: "'JetBrains Mono',monospace" }}>{rec || "--"}%</b></span>
+    <span style={{ fontSize: 15, color: S.t2 }}>HRV <b style={{ color: S.t1, fontFamily: "'JetBrains Mono',monospace" }}>{hrv || "--"}</b></span>
+    <span style={{ fontSize: 15, color: S.t2 }}>Strain <b style={{ color: S.t1, fontFamily: "'JetBrains Mono',monospace" }}>{strain || "--"}</b></span>
+    <span style={{ fontSize: 15, color: S.t2 }}>Sleep <b style={{ color: S.t1, fontFamily: "'JetBrains Mono',monospace" }}>{sleepHours || slp || "--"}h</b></span>
+  </div>}>
+<div className="sg" style={{ padding: 0, marginTop: 14 }}>
 <div className="stat"><div className="stat-label">Recovery</div><div className="stat-val">{rec || "--"}<span className="stat-unit">%</span></div></div>
 <div className="stat"><div className="stat-label">HRV</div><div className="stat-val">{hrv || "--"}<span className="stat-unit"> ms</span></div></div>
 <div className="stat"><div className="stat-label">Resting HR</div><div className="stat-val">{rhr || "--"}<span className="stat-unit"> bpm</span></div></div>
@@ -1506,31 +1564,37 @@ onClick={() => setPlanOpen(p => !p)}>
 <div className="stat"><div className="stat-label">Sleep</div><div className="stat-val">{sleepHours || slp || "--"}<span className="stat-unit"> hrs</span></div></div>
 <div className="stat"><div className="stat-label">Sleep Score</div><div className="stat-val">{sleepScore || "--"}<span className="stat-unit">%</span></div></div>
 <div className="stat"><div className="stat-label">Strain</div><div className="stat-val">{strain || "--"}<span className="stat-unit"> /21</span></div></div>
+<div className="stat"><div className="stat-label">Respiration</div><div className="stat-val">{respRate || "--"}<span className="stat-unit"> rpm</span></div></div>
 </div>
 {(avgHr || caloriesBurned) && (
-<div style={{ display: "flex", gap: 16, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${S.border}` }}>
-{avgHr && <div style={{ fontSize: 12, color: S.t2 }}>Avg HR: <span style={{ color: S.cyan, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{avgHr} bpm</span></div>}
-{maxHr && <div style={{ fontSize: 12, color: S.t2 }}>Max HR: <span style={{ color: S.orange, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{maxHr} bpm</span></div>}
-{caloriesBurned && <div style={{ fontSize: 12, color: S.t2 }}>Burned: <span style={{ color: S.green, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{caloriesBurned} cal</span></div>}
+<div style={{ display: "flex", gap: 16, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${S.border}`, flexWrap: "wrap" }}>
+{avgHr && <div style={{ fontSize: 15, color: S.t2 }}>Avg HR: <span style={{ color: S.cyan, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{avgHr} bpm</span></div>}
+{maxHr && <div style={{ fontSize: 15, color: S.t2 }}>Max HR: <span style={{ color: S.orange, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{maxHr} bpm</span></div>}
+{caloriesBurned && <div style={{ fontSize: 15, color: S.t2 }}>Burned: <span style={{ color: S.green, fontFamily: "'JetBrains Mono',monospace", fontWeight: 700 }}>{caloriesBurned} cal</span></div>}
 </div>
 )}
-</div>
+</Exp>
 
-<div className="card" style={{ borderLeft: `3px solid ${S.orange}` }}>
-<div className="card-hdr">
-<div className="card-title"><span style={{ fontSize: 20 }}>🍽️</span> Nutrition</div>
-<div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-<div className="card-badge" style={{ background: "rgba(168,85,247,0.12)", color: S.purple, cursor: "pointer" }} onClick={() => setGoalModal(true)}>⚙️ Goals</div>
-<div className="card-badge" style={{ background: "rgba(245,158,11,0.12)", color: S.orange }}>{tCal} cal</div>
-</div>
-</div>
-<div style={{ display: "flex", justifyContent: "space-around", padding: "8px 0" }}>
+{/* ── Nutrition (Expandable) ── */}
+<Exp icon="🍽️" title="Nutrition" borderColor={S.orange}
+  badge={tCal + " cal"}
+  badgeColor="rgba(245,158,11,0.12)"
+  preview={<div style={{ marginTop: 10, display: "flex", gap: 14, flexWrap: "wrap" }}>
+    <span style={{ fontSize: 15, color: S.t2 }}>Protein <b style={{ color: S.green, fontFamily: "'JetBrains Mono',monospace" }}>{tPro}g</b></span>
+    <span style={{ fontSize: 15, color: S.t2 }}>Carbs <b style={{ color: S.orange, fontFamily: "'JetBrains Mono',monospace" }}>{tCarb}g</b></span>
+    <span style={{ fontSize: 15, color: S.t2 }}>Fat <b style={{ color: S.pink, fontFamily: "'JetBrains Mono',monospace" }}>{tFat}g</b></span>
+  </div>}>
+<div style={{ display: "flex", justifyContent: "space-around", padding: "14px 0" }}>
 <Ring val={tPro} max={goals.pro} color={S.green} label="PROTEIN" />
 <Ring val={tCarb} max={goals.carb} color={S.orange} label="CARBS" />
 <Ring val={tFat} max={goals.fat} color={S.pink} label="FAT" />
 <Ring val={tCal} max={goals.cal} color={S.cyan} label="CALORIES" />
 </div>
+<div style={{ textAlign: "center", paddingTop: 10 }}>
+<span style={{ fontSize: 14, color: S.purple, fontWeight: 700, cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); setGoalModal(true); }}>⚙️ Edit Goals</span>
 </div>
+</Exp>
+
 </div>
 )}
 
@@ -1574,7 +1638,7 @@ try {
 Lookup
 </button>
 </div>
-<div style={{ fontSize: 11, color: S.t3, marginTop: 6, textAlign: "center" }}>
+<div style={{ fontSize: 15, color: S.t3, marginTop: 6, textAlign: "center" }}>
 Enter the barcode number from any food package — pulls from Open Food Facts database (2M+ products)
 </div>
 </div>
@@ -1595,11 +1659,11 @@ Enter the barcode number from any food package — pulls from Open Food Facts da
 <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
 <span style={{ fontSize: 18 }}>{f.i}</span>
 <div style={{ minWidth: 0, flex: 1 }}>
-<span style={{ fontSize: 13, fontWeight: 600 }}>{f.qty && f.qty > 1 ? `${f.qty}× ` : ""}{f.n}</span>
+<span style={{ fontSize: 15, fontWeight: 600 }}>{f.qty && f.qty > 1 ? `${f.qty}× ` : ""}{f.n}</span>
 <div style={{ fontSize: 10, color: S.t3 }}>{f.p}p · {f.cb}c · {f.f}f · {f.t}</div>
 </div>
 </div>
-<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 700, color: S.green, flexShrink: 0 }}>{f.c}</div>
+<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 15, fontWeight: 700, color: S.green, flexShrink: 0 }}>{f.c}</div>
 <button className="logged-del" onClick={() => { setFoods(p => p.filter((_, j) => j !== i)); show("Removed " + f.n); }}>×</button>
 </div>
 ))}
@@ -1634,7 +1698,7 @@ return (
 <div className="qty-btn" onClick={() => setFoodQty(p => ({ ...p, [qKey]: (p[qKey] || 1) + 1 }))}>+</div>
 <span className="qty-unit">{unit}{qty > 1 ? "s" : ""}</span>
 <span className="qty-total">{item.c * qty} cal</span>
-<button style={{ marginLeft: "auto", padding: "8px 16px", borderRadius: 10, background: S.green, color: "#000", fontSize: 13, fontWeight: 800, border: "none", cursor: "pointer" }}
+<button style={{ marginLeft: "auto", padding: "8px 16px", borderRadius: 10, background: S.green, color: "#000", fontSize: 15, fontWeight: 800, border: "none", cursor: "pointer" }}
 onClick={() => {
 setFoods(p => [...p, { ...item, c: item.c * qty, p: item.p * qty, cb: item.cb * qty, f: Math.round(item.f * qty * 10) / 10, qty, t: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
 setFoodQty(p => ({ ...p, [qKey]: 1 }));
@@ -1686,13 +1750,13 @@ onClick={() => setModal("ai_workout")}>
 <div className="card card-sm" style={{ marginBottom: 14 }}>
 <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
 {workouts.filter(w => w.type === "cardio").length > 0 && (
-<div style={{ fontSize: 12, color: S.t2 }}>🚴 Cardio: <span style={{ color: S.cyan, fontWeight: 700 }}>{workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.mins, 0)} min / {workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.cal, 0)} cal</span></div>
+<div style={{ fontSize: 14, color: S.t2 }}>🚴 Cardio: <span style={{ color: S.cyan, fontWeight: 700 }}>{workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.mins, 0)} min / {workouts.filter(w => w.type === "cardio").reduce((s, w) => s + w.cal, 0)} cal</span></div>
 )}
 {workouts.filter(w => w.type === "strength").length > 0 && (
-<div style={{ fontSize: 12, color: S.t2 }}>🏋️ Strength: <span style={{ color: S.purple, fontWeight: 700 }}>{workouts.filter(w => w.type === "strength").length} exs / {workouts.filter(w => w.sets).reduce((s, w) => s + w.sets.reduce((ss, set) => ss + (set.reps * set.wt), 0), 0).toLocaleString()} lbs vol</span></div>
+<div style={{ fontSize: 14, color: S.t2 }}>🏋️ Strength: <span style={{ color: S.purple, fontWeight: 700 }}>{workouts.filter(w => w.type === "strength").length} exs / {workouts.filter(w => w.sets).reduce((s, w) => s + w.sets.reduce((ss, set) => ss + (set.reps * set.wt), 0), 0).toLocaleString()} lbs vol</span></div>
 )}
 {workouts.filter(w => w.type === "recovery").length > 0 && (
-<div style={{ fontSize: 12, color: S.t2 }}>🧘 Recovery: <span style={{ color: S.green, fontWeight: 700 }}>{workouts.filter(w => w.type === "recovery").reduce((s, w) => s + w.mins, 0)} min</span></div>
+<div style={{ fontSize: 14, color: S.t2 }}>🧘 Recovery: <span style={{ color: S.green, fontWeight: 700 }}>{workouts.filter(w => w.type === "recovery").reduce((s, w) => s + w.mins, 0)} min</span></div>
 )}
 </div>
 </div>
@@ -1750,18 +1814,18 @@ setWktSummaryLoading(false);
 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
 <div className="wi-name">{w.type === "strength" ? "\ud83c\udfcb\ufe0f" : w.type === "cardio" ? "\ud83d\udeb4" : "\ud83e\uddd6"} {w.name}</div>
 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: S.green }}>{w.mins}m {w.cal ? "\u00b7 " + w.cal + "cal" : ""}</div>
+<div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 14, color: S.green }}>{w.mins}m {w.cal ? "\u00b7 " + w.cal + "cal" : ""}</div>
 <button className="logged-del" onClick={() => { setWkts(p => p.filter((_, j) => j !== i)); show("Removed " + w.name); }}>x</button>
 </div>
 </div>
 {w.sets && w.sets.length > 0 && (
 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
 {w.sets.map((s, si) => (
-<div key={si} style={{ background: "rgba(0,212,170,0.08)", borderRadius: 8, padding: "3px 8px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: S.cyan }}>
+<div key={si} style={{ background: "rgba(0,212,170,0.08)", borderRadius: 8, padding: "3px 8px", fontSize: 15, fontFamily: "'JetBrains Mono',monospace", color: S.cyan }}>
 S{si+1}: {s.reps}x{s.wt}lb
 </div>
 ))}
-<div style={{ background: "rgba(168,85,247,0.1)", borderRadius: 8, padding: "3px 8px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: S.purple }}>
+<div style={{ background: "rgba(168,85,247,0.1)", borderRadius: 8, padding: "3px 8px", fontSize: 15, fontFamily: "'JetBrains Mono',monospace", color: S.purple }}>
 Vol: {w.sets.reduce((sum, s) => sum + (s.reps * s.wt), 0)} lbs
 </div>
 </div>
@@ -1816,7 +1880,7 @@ show("\u2713 " + ex.n + " \u2014 " + s.length + " sets");
 {sets.length > 0 && (
 <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 6 }}>
 {sets.map((s, si) => (
-<div key={si} style={{ background: "rgba(6,182,212,0.1)", borderRadius: 8, padding: "2px 8px", fontSize: 11, fontFamily: "'JetBrains Mono',monospace", color: S.cyan, display: "flex", alignItems: "center", gap: 4 }}>
+<div key={si} style={{ background: "rgba(6,182,212,0.1)", borderRadius: 8, padding: "2px 8px", fontSize: 15, fontFamily: "'JetBrains Mono',monospace", color: S.cyan, display: "flex", alignItems: "center", gap: 4 }}>
 S{si+1}: {s.reps}x{s.wt}lb
 <span style={{ color: S.red, cursor: "pointer", fontSize: 13 }} onClick={() => {
 setWoSets(p => ({ ...p, [ex.n]: (p[ex.n] || []).filter((_, j) => j !== si) }));
@@ -1826,12 +1890,12 @@ setWoSets(p => ({ ...p, [ex.n]: (p[ex.n] || []).filter((_, j) => j !== si) }));
 </div>
 )}
 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-<input type="number" placeholder="reps" inputMode="numeric" style={{ width: 50, background: "rgba(255,255,255,0.05)", border: "1px solid " + S.border, borderRadius: 8, color: S.t1, padding: "6px 8px", fontSize: 13, fontFamily: "'JetBrains Mono',monospace" }}
+<input type="number" placeholder="reps" inputMode="numeric" style={{ width: 50, background: "rgba(255,255,255,0.05)", border: "1px solid " + S.border, borderRadius: 8, color: S.t1, padding: "6px 8px", fontSize: 15, fontFamily: "'JetBrains Mono',monospace" }}
 value={woCurrentReps[ex.n] || ""} onChange={e => setWoCurrentReps(p => ({...p, [ex.n]: e.target.value}))} />
-<span style={{ color: S.t3, fontSize: 11 }}>x</span>
-<input type="number" placeholder="lbs" inputMode="numeric" style={{ width: 55, background: "rgba(255,255,255,0.05)", border: "1px solid " + S.border, borderRadius: 8, color: S.t1, padding: "6px 8px", fontSize: 13, fontFamily: "'JetBrains Mono',monospace" }}
+<span style={{ color: S.t3, fontSize: 13 }}>x</span>
+<input type="number" placeholder="lbs" inputMode="numeric" style={{ width: 55, background: "rgba(255,255,255,0.05)", border: "1px solid " + S.border, borderRadius: 8, color: S.t1, padding: "6px 8px", fontSize: 15, fontFamily: "'JetBrains Mono',monospace" }}
 value={woCurrentWt[ex.n] || ""} onChange={e => setWoCurrentWt(p => ({...p, [ex.n]: e.target.value}))} />
-<button style={{ background: S.cyan, color: "#000", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }} onClick={() => {
+<button style={{ background: S.cyan, color: "#000", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 14, fontWeight: 700, cursor: "pointer" }} onClick={() => {
 const r = parseInt(woCurrentReps[ex.n]) || 0;
 const w = parseInt(woCurrentWt[ex.n]) || 0;
 if (r <= 0 || w <= 0) { show("Enter reps and weight"); return; }
@@ -1855,7 +1919,7 @@ show("Set " + ((woSets[ex.n] || []).length + 1) + " added");
 <div className="content" style={{ paddingTop: 14 }}>
 <div className="card">
 <div className="card-title" style={{ marginBottom: 14 }}><span style={{ fontSize: 20 }}>📷</span> Upload Device Screenshot</div>
-<div style={{ fontSize: 13, color: S.t2, marginBottom: 12 }}>AI will analyze and extract your metrics</div>
+<div style={{ fontSize: 15, color: S.t2, marginBottom: 12 }}>AI will analyze and extract your metrics</div>
 
 <div className="chips">
 {["📱 Garmin", "🟢 WHOOP", "❤️ Blood Pressure", "💨 CPAP / myAir", "⚖️ Withings", "💍 Oura Ring", "📸 Food Photo", "🩸 Lab Results"].map(ch => (
@@ -1866,7 +1930,7 @@ show("Set " + ((woSets[ex.n] || []).length + 1) + " added");
 <div className="upzone" onClick={() => fileRef.current?.click()}>
 <div style={{ fontSize: 36 }}>📷</div>
 <div style={{ fontSize: 15, fontWeight: 600, marginTop: 8 }}>Tap to upload screenshot or photo</div>
-<div style={{ fontSize: 12, color: S.t3, marginTop: 4 }}>Camera or gallery · Select multiple</div>
+<div style={{ fontSize: 14, color: S.t3, marginTop: 4 }}>Camera or gallery · Select multiple</div>
 </div>
 
 
@@ -1891,7 +1955,7 @@ show(`✓ ${files.length} photo${files.length > 1 ? "s" : ""} uploaded`);
 <div key={i} style={{ position: "relative", width: 64, height: 64, borderRadius: 10, overflow: "hidden", border: `1px solid ${S.border}` }}>
 <img src={f.data} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
 <div style={{ position: "absolute", top: 2, right: 2, width: 20, height: 20, borderRadius: "50%", background: "rgba(0,0,0,0.7)",
-display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, cursor: "pointer", color: "#fff" }}
+display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, cursor: "pointer", color: "#fff" }}
 onClick={() => setAiUploads(p => p.filter((_, j) => j !== i))}>×</div>
 </div>
 ))}
@@ -2064,7 +2128,7 @@ style={{ width: "100%", minHeight: 72, background: "rgba(255,255,255,0.04)", bor
 borderRadius: 14, padding: 14, color: S.t1, fontSize: 15, fontFamily: "'Plus Jakarta Sans',sans-serif",
 resize: "vertical", outline: "none" }} />
 
-<div style={{ fontSize: 12, color: S.t3, marginTop: 8, textAlign: "center" }}>
+<div style={{ fontSize: 14, color: S.t3, marginTop: 8, textAlign: "center" }}>
 💡 Upload Garmin, WHOOP, BP, CPAP, Withings, or Oura screenshots — AI extracts your metrics automatically and saves to your dashboard.
 </div>
 </div>
@@ -2093,7 +2157,7 @@ setAiLoading(false);
 <div style={{ fontSize: 16, fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
 <span>✅</span> Review Extracted Metrics
 </div>
-<button style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${S.border}`, background: "transparent", color: S.t3, fontSize: 12, cursor: "pointer" }}
+<button style={{ padding: "6px 12px", borderRadius: 8, border: `1px solid ${S.border}`, background: "transparent", color: S.t3, fontSize: 14, cursor: "pointer" }}
 onClick={() => setAiExtracted(null)}>Dismiss</button>
 </div>
 
@@ -2123,7 +2187,7 @@ onClick={() => setAiExtracted(null)}>Dismiss</button>
 <div key={m.k} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${S.border}`, borderRadius: 12, padding: 10 }}>
 <div style={{ fontSize: 10, color: S.t2, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>{m.label}</div>
 <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 22, fontWeight: 800, color: S.green, marginTop: 2 }}>
-{aiExtracted[m.k]}<span style={{ fontSize: 12, color: S.t3, fontWeight: 500 }}> {m.unit}</span>
+{aiExtracted[m.k]}<span style={{ fontSize: 14, color: S.t3, fontWeight: 500 }}> {m.unit}</span>
 </div>
 </div>
 ))}
@@ -2173,8 +2237,8 @@ onClick={() => setAiExtracted(null)}>Skip</button>
 <span style={{ fontSize: 20, color: S.t3 }}>→</span>
 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 28, fontWeight: 800, color: S.green }}>{wt || "210"}</span>
 </div>
-<div style={{ fontSize: 13, color: S.green, fontWeight: 700, marginTop: 6 }}>↓ {(280 - (parseFloat(wt) || 210)).toFixed(1)} lbs lost</div>
-<div style={{ fontSize: 12, color: S.t3, marginTop: 4 }}>Next: {targetWeight} {parseInt(targetWeight) < 200 ? "(Onederland!) " : ""}🎯</div>
+<div style={{ fontSize: 15, color: S.green, fontWeight: 700, marginTop: 6 }}>↓ {(280 - (parseFloat(wt) || 210)).toFixed(1)} lbs lost</div>
+<div style={{ fontSize: 14, color: S.t3, marginTop: 4 }}>Next: {targetWeight} {parseInt(targetWeight) < 200 ? "(Onederland!) " : ""}🎯</div>
 </div>
 <div className="stat" style={{ marginBottom: 10 }}>
 <div className="stat-label">Today's Nutrition</div>
@@ -2192,7 +2256,7 @@ onClick={() => setAiExtracted(null)}>Skip</button>
 
 <div className="card">
 <div className="card-title" style={{ marginBottom: 14 }}>⚙️ Goals</div>
-<div style={{ fontSize: 13, color: S.t2, lineHeight: 2 }}>
+<div style={{ fontSize: 15, color: S.t2, lineHeight: 2 }}>
 Daily Calories: <span style={{ color: S.t1, fontWeight: 700 }}>{parseInt(goalCal).toLocaleString()}</span><br />
 Daily Protein: <span style={{ color: S.t1, fontWeight: 700 }}>{goalPro}g</span><br />
 Daily Carbs: <span style={{ color: S.t1, fontWeight: 700 }}>{goalCarb}g</span><br />
@@ -2223,7 +2287,7 @@ Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
         onClick={() => { if (confirm("Remove " + m.name + "?")) setMeds(p => p.filter((_, j) => j !== i)); }}>×</button>
     </div>
   </div>
-  <div style={{ fontSize: 11, color: S.t3, marginTop: 6, fontStyle: "italic" }}>{m.notes}</div>
+  <div style={{ fontSize: 15, color: S.t3, marginTop: 6, fontStyle: "italic" }}>{m.notes}</div>
   </div>
   );
 })}
@@ -2245,7 +2309,7 @@ Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
 <div className="card">
 <div className="card-hdr" style={{ cursor: "pointer" }} onClick={() => setBwExpanded(!bwExpanded)}>
   <div className="card-title">{"\uD83E\uDE78"} Bloodwork</div>
-  <div style={{ fontSize: 12, color: S.t3 }}>{bwExpanded ? "\u25B2" : "\u25BC"} {bloodwork.length > 0 ? bloodwork.length + " test" + (bloodwork.length > 1 ? "s" : "") : "None"}</div>
+  <div style={{ fontSize: 14, color: S.t3 }}>{bwExpanded ? "\u25B2" : "\u25BC"} {bloodwork.length > 0 ? bloodwork.length + " test" + (bloodwork.length > 1 ? "s" : "") : "None"}</div>
 </div>
 {bloodwork.length > 0 && (() => {
   const latest = bloodwork[bloodwork.length - 1];
@@ -2254,14 +2318,14 @@ Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
   const isOld = daysSince > 365;
   return (
     <div style={{ marginTop: 8 }}>
-    {isOld && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 12, color: S.red, fontWeight: 700 }}>{"\u26A0\uFE0F"} Bloodwork is {Math.floor(daysSince / 30)} months old {"\u2014"} schedule updated labs{parseInt(userProfile.age) >= 50 ? " (recommended every 6 months at age " + userProfile.age + ")" : ""}</div>}
-    <div style={{ fontSize: 12, color: S.t3, marginBottom: 8 }}>Last test: {testDate.toLocaleDateString()} ({daysSince} days ago)</div>
+    {isOld && <div style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "8px 12px", marginBottom: 10, fontSize: 14, color: S.red, fontWeight: 700 }}>{"\u26A0\uFE0F"} Bloodwork is {Math.floor(daysSince / 30)} months old {"\u2014"} schedule updated labs{parseInt(userProfile.age) >= 50 ? " (recommended every 6 months at age " + userProfile.age + ")" : ""}</div>}
+    <div style={{ fontSize: 14, color: S.t3, marginBottom: 8 }}>Last test: {testDate.toLocaleDateString()} ({daysSince} days ago)</div>
     </div>
   );
 })()}
 {bwExpanded && (
 <div>
-{bloodwork.length === 0 && <div style={{ fontSize: 13, color: S.t3, padding: "12px 0" }}>No bloodwork uploaded yet. Upload lab results on the IQ tab or add manually below.</div>}
+{bloodwork.length === 0 && <div style={{ fontSize: 15, color: S.t3, padding: "12px 0" }}>No bloodwork uploaded yet. Upload lab results on the IQ tab or add manually below.</div>}
 {bloodwork.length > 0 && bloodwork.slice(-1).map((bw, bi) => (
   <div key={bi} className="sg" style={{ gap: 6 }}>
   {Object.entries(bw.markers || {}).map(([key, val]) => {
@@ -2316,7 +2380,7 @@ Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
   </div>
 </div>
 {userProfile.conditions.length > 0 && (
-  <div style={{ marginTop: 10, fontSize: 12, color: S.t2 }}>Conditions: <span style={{ color: S.orange, fontWeight: 700 }}>{userProfile.conditions.join(", ")}</span></div>
+  <div style={{ marginTop: 10, fontSize: 14, color: S.t2 }}>Conditions: <span style={{ color: S.orange, fontWeight: 700 }}>{userProfile.conditions.join(", ")}</span></div>
 )}
 <button className="btn" style={{ marginTop: 10, background: "rgba(255,255,255,0.04)", color: S.t2, border: `1.5px solid ${S.border}` }}
   onClick={() => {
@@ -2331,7 +2395,7 @@ Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
 
 <div className="card">
 <div className="card-title" style={{ marginBottom: 14 }}>{"\uD83D\uDCBE"} Data Storage</div>
-<div style={{ fontSize: 13, color: S.t2, marginBottom: 12 }}>
+<div style={{ fontSize: 15, color: S.t2, marginBottom: 12 }}>
 All data auto-saves and persists between sessions.
 </div>
 <button className="btn" style={{ background: "rgba(239,68,68,0.1)", color: S.red, border: `1.5px solid rgba(239,68,68,0.3)`, marginBottom: 8 }}
@@ -2362,10 +2426,10 @@ show("✓ All data reset");
 
 <div className="card" style={{ borderLeft: `3px solid ${S.cyan}` }}>
 <div className="card-title" style={{ marginBottom: 10 }}>{"\uD83D\uDD12"} Account</div>
-<div style={{ fontSize: 13, color: S.t2, marginBottom: 12 }}>
+<div style={{ fontSize: 15, color: S.t2, marginBottom: 12 }}>
 Signed in as <span style={{ color: S.t1, fontWeight: 700 }}>{user?.email}</span>
 </div>
-<div style={{ fontSize: 12, color: S.t3, marginBottom: 12 }}>
+<div style={{ fontSize: 14, color: S.t3, marginBottom: 12 }}>
 Data syncs to cloud automatically. Access from any device.
 </div>
 <button className="btn" style={{ background: "rgba(6,182,212,0.08)", color: S.cyan, border: `1.5px solid rgba(6,182,212,0.25)` }}
@@ -2383,7 +2447,7 @@ onClick={async () => { await sb.auth.signOut(); }}>Sign Out</button>
 <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #00e5c7, #00d4ff)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 14, color: "#0b1120" }}>IQ</div>
 <div>
 <div style={{ fontSize: 15, fontWeight: 800, color: S.t1 }}>IQ Coach</div>
-<div style={{ fontSize: 11, color: S.t3 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div>
+<div style={{ fontSize: 15, color: S.t3 }}>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</div>
 </div>
 </div>
 <button style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: S.t3, fontSize: 14, padding: "6px 12px", cursor: "pointer" }}
@@ -2392,7 +2456,7 @@ onClick={() => setCoachOpen(false)}>✕</button>
 {coachLoading && (
 <div className="coach-preparing">
 <div className="coach-pulse" />
-<div style={{ fontSize: 13, color: S.green, fontWeight: 700 }}>IQ Coach is preparing your personalized briefing...</div>
+<div style={{ fontSize: 15, color: S.green, fontWeight: 700 }}>IQ Coach is preparing your personalized briefing...</div>
 </div>
 )}
 <div className="coach-body">
@@ -2415,7 +2479,7 @@ onClick={() => setCoachOpen(false)}>✕</button>
   { label: "Sauna/Plunge Tips", q: `Given my recovery at ${rec}%, HRV ${hrv}ms, and today's strain ${strain}, should I do infrared sauna, cold plunge, both, or neither today? How long for each? What order? I'm ${userProfile.age} years old with a resting HR of ${rhr} bpm.` },
   { label: "Med Check", q: `Review my current medications and their impact on my training: ${meds.map(m => m.name + " " + m.dose + " " + m.freq + " (" + m.day + ") - " + m.notes).join("; ")}. Today is ${new Date().toLocaleDateString("en-US", { weekday: "long" })}. How do these affect my workout today? Any timing considerations?` },
 ].map(t => (
-<button key={t.label} style={{ padding: "8px 14px", borderRadius: 20, background: "rgba(0,212,170,0.08)", border: "1px solid rgba(0,212,170,0.2)", color: S.green, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+<button key={t.label} style={{ padding: "8px 14px", borderRadius: 20, background: "rgba(0,212,170,0.08)", border: "1px solid rgba(0,212,170,0.2)", color: S.green, fontSize: 14, fontWeight: 700, cursor: "pointer" }}
 onClick={async () => {
   setCoachLoading(true); setCoachResp("");
   try {
@@ -2441,15 +2505,20 @@ onClick={async () => {
 {[
 { id: "home", icon: "🏠", label: "Home" },
 { id: "food", icon: "🍽️", label: "Food" },
-{ id: "ai", icon: "✨", label: "" },
 { id: "train", icon: "🏋️", label: "Train" },
 { id: "more", icon: "📊", label: "More" },
 ].map(n => (
 <div key={n.id} className={`bnav-item ${tab === n.id ? "on" : ""}`} onClick={() => setTab(n.id)}>
-<div className="bnav-icon" style={n.id === "ai" ? { fontSize: 30, marginTop: -16, width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg,${S.green},${S.cyan})`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(0,212,170,0.3)" } : {}}>{n.icon}</div>
+<div className="bnav-icon">{n.icon}</div>
 <div className="bnav-label">{n.label}</div>
 </div>
 ))}
+</div>
+
+{/* IQ Coach floating button - like WHOOP */}
+<div style={{ position: "fixed", bottom: "max(76px, calc(60px + env(safe-area-inset-bottom)))", right: "max(calc(50% - 236px), 12px)", width: 54, height: 54, borderRadius: "50%", background: "linear-gradient(135deg, " + S.green + ", " + S.cyan + ")", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 90, boxShadow: "0 4px 20px rgba(0,212,170,0.35)", transition: "all 0.15s" }}
+onClick={() => setTab("ai")}>
+<span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 900, fontSize: 20, color: "#0b1120", letterSpacing: 1, lineHeight: 1 }}>IQ</span>
 </div>
 
 {toast && <div className="toast">{toast}</div>}
