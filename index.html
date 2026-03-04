@@ -18,27 +18,24 @@
 <div id="root"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-<script>
-// Pre-load Supabase via dynamic import before Babel runs
-window.__sbReady = new Promise(function(resolve) {
-  var s = document.createElement("script");
-  s.type = "module";
-  s.textContent = 'import{createClient}from"https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";window.__sb=createClient("https://agmypeqmmclhecnnrilv.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnbXlwZXFtbWNsaGVjbm5yaWx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1ODAxNjAsImV4cCI6MjA4ODE1NjE2MH0.zyi6oOjHBsepmYDjB4mnlbJAmHD25E1dcX6NvNRzDzM");document.dispatchEvent(new Event("sb-ready"));';
-  document.head.appendChild(s);
-  document.addEventListener("sb-ready", function() { resolve(); });
-  // Timeout fallback
-  setTimeout(function() { resolve(); }, 3000);
-});
-</script>
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
-// ── Supabase Client (loaded via ESM module) ──
-// sb will be null initially, updated once ESM loads
-let sb = window.__sb || null;
-// Update sb when Supabase finishes loading
-if (window.__sbReady) window.__sbReady.then(() => { sb = window.__sb || null; });
+// ── Supabase Client (UMD loaded synchronously above) ──
+const sb = (function() {
+  try {
+    if (window.supabase && window.supabase.createClient) {
+      return window.supabase.createClient(
+        "https://agmypeqmmclhecnnrilv.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnbXlwZXFtbWNsaGVjbm5yaWx2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1ODAxNjAsImV4cCI6MjA4ODE1NjE2MH0.zyi6oOjHBsepmYDjB4mnlbJAmHD25E1dcX6NvNRzDzM"
+      );
+    }
+  } catch(e) { console.error("[VitalCommand] Supabase init error:", e); }
+  return null;
+})();
+console.log("[VitalCommand] Supabase:", sb ? "connected" : "not available");
 
 
 /*
@@ -61,15 +58,12 @@ function AuthScreen({ onAuth }) {
     if (!email || !pass) { setErr("Email and password required"); return; }
     setLoading(true); setErr("");
     try {
-      if (window.__sbReady) await window.__sbReady;
-      const client = window.__sb;
-      if (!client) { setErr("Still connecting... try again in a moment"); setLoading(false); return; }
       if (mode === "signup") {
-        const { data, error } = await client.auth.signUp({ email, password: pass, options: { data: { display_name: name || email.split("@")[0] } } });
+        const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { display_name: name || email.split("@")[0] } } });
         if (error) throw error;
         if (data.user) onAuth(data.user);
       } else {
-        const { data, error } = await client.auth.signInWithPassword({ email, password: pass });
+        const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
         if (data.user) onAuth(data.user);
       }
@@ -112,27 +106,17 @@ function AuthScreen({ onAuth }) {
 function RootApp() {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
-  const [sbClient, setSbClient] = useState(window.__sb || null);
 
   useEffect(() => {
-    // Wait for Supabase to load via ESM
-    const init = async () => {
-      if (!window.__sb && window.__sbReady) {
-        await window.__sbReady;
-      }
-      const client = window.__sb || null;
-      setSbClient(client);
-      if (!client) { setChecking(false); return; }
-      client.auth.getSession().then(({ data: { session } }) => {
-        setUser(session?.user || null);
-        setChecking(false);
-      }).catch(() => setChecking(false));
-      const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
-        setUser(session?.user || null);
-      });
-      return () => subscription.unsubscribe();
-    };
-    init();
+    if (!sb) { setChecking(false); return; }
+    sb.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+      setChecking(false);
+    }).catch(() => setChecking(false));
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   if (checking) return React.createElement("div", { style: { minHeight: "100dvh", background: "#0b1120", display: "flex", alignItems: "center", justifyContent: "center" } },
@@ -2385,7 +2369,7 @@ Signed in as <span style={{ color: S.t1, fontWeight: 700 }}>{user?.email}</span>
 Data syncs to cloud automatically. Access from any device.
 </div>
 <button className="btn" style={{ background: "rgba(6,182,212,0.08)", color: S.cyan, border: `1.5px solid rgba(6,182,212,0.25)` }}
-onClick={async () => { if (window.__sb) await window.__sb.auth.signOut(); }}>Sign Out</button>
+onClick={async () => { await sb.auth.signOut(); }}>Sign Out</button>
 </div>
 </div>
 )}
