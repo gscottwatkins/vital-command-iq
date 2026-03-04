@@ -33,7 +33,7 @@ const babelScript = document.querySelector('script[data-type="text/babel"]');
 if (babelScript && window.Babel) {
   try {
     const compiled = window.Babel.transform(babelScript.textContent, {
-      presets: ["env", "react"]
+      presets: ["react"]
     }).code;
     const runScript = document.createElement("script");
     runScript.textContent = compiled;
