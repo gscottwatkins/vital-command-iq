@@ -371,6 +371,9 @@ function App({ user }) {
 const [tab, setTab] = useState("home");
 const [toast, setToast] = useState(null);
 const [modal, setModal] = useState(null);
+const [medModal, setMedModal] = useState(false);
+const [medForm, setMedForm] = useState({ name: "", dose: "", freq: "daily", day: "Daily", time: "08:00", type: "pill", notes: "" });
+const [accountModal, setAccountModal] = useState(false);
 
 // ── Data State ──
 const [foods, setFoods] = useState([]);
@@ -1397,7 +1400,7 @@ return (
 </div>
 <div className="date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</div>
 </div>
-<div className="hdr-icon" style={{ background: "linear-gradient(135deg, #00e5c7, #00d4ff)", color: "#0b1120", fontWeight: 900, fontSize: 18, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: 1 }}>
+<div className="hdr-icon" onClick={() => setAccountModal(true)} style={{ background: "linear-gradient(135deg, #00e5c7, #00d4ff)", color: "#0b1120", fontWeight: 900, fontSize: 18, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: 1, cursor: "pointer" }}>
 {(user?.user_metadata?.display_name || user?.email || "U").split(" ").map(w => w[0]).join("").toUpperCase().slice(0,2)}
 </div>
 </div>
@@ -1835,10 +1838,9 @@ Vol: {w.sets.reduce((sum, s) => sum + (s.reps * s.wt), 0)} lbs
 </>
 )}
 
-{/* Exercise Categories */}
+{/* Exercise Categories - Expandable */}
 {Object.entries(WORKOUTS).map(([cat, exs]) => (
-<div key={cat}>
-<div className="sec" style={{ paddingLeft: 0 }}>{cat}</div>
+<Exp key={cat} icon={cat.includes("KETTLE") ? "🔔" : cat.includes("BARBELL") ? "🏋️" : cat.includes("CARDIO") ? "🚴" : cat.includes("RECOVERY") ? "🧘" : "💪"} title={cat} borderColor={cat.includes("RECOVERY") ? S.green : cat.includes("CARDIO") ? S.cyan : S.purple}>
 {exs.map((ex, i) => {
 const done = workouts.some(w => w.name === ex.n);
 const isStrength = ex.type === "strength";
@@ -1909,7 +1911,7 @@ show("Set " + ((woSets[ex.n] || []).length + 1) + " added");
 </div>
 );
 })}
-</div>
+</Exp>
 ))}
 </div>
 )}
@@ -2268,8 +2270,12 @@ Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
 <button className="btn" style={{ marginTop: 12, background: "rgba(168,85,247,0.1)", color: S.purple, border: `1.5px solid rgba(168,85,247,0.3)` }} onClick={() => setModal("goals")}>Edit Goals</button>
 </div>
 
-<div className="card">
-<div className="card-title" style={{ marginBottom: 14 }}>💊 Medications</div>
+<Exp icon="💊" title="Medications" borderColor={S.purple}
+  badge={meds.length > 0 ? meds.length + " med" + (meds.length > 1 ? "s" : "") : null}
+  badgeColor="rgba(168,85,247,0.12)"
+  preview={meds.length > 0 ? <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+    {meds.map((m, i) => <span key={i} style={{ fontSize: 14, color: S.purple, background: "rgba(168,85,247,0.08)", padding: "3px 10px", borderRadius: 8, fontWeight: 700 }}>{m.name}</span>)}
+  </div> : <div style={{ marginTop: 8, fontSize: 15, color: S.t3 }}>No medications added</div>}>
 {meds.map((m, i) => {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
   const isDue = m.day === today;
@@ -2287,24 +2293,13 @@ Visceral Fat Target: <span style={{ color: S.green, fontWeight: 700 }}>7</span>
         onClick={() => { if (confirm("Remove " + m.name + "?")) setMeds(p => p.filter((_, j) => j !== i)); }}>×</button>
     </div>
   </div>
-  <div style={{ fontSize: 15, color: S.t3, marginTop: 6, fontStyle: "italic" }}>{m.notes}</div>
+  {m.notes && <div style={{ fontSize: 14, color: S.t3, marginTop: 6, fontStyle: "italic" }}>{m.notes}</div>}
   </div>
   );
 })}
 <button className="btn" style={{ marginTop: 8, background: "rgba(168,85,247,0.1)", color: S.purple, border: "1.5px solid rgba(168,85,247,0.3)" }}
-  onClick={() => {
-    const name = prompt("Medication name:");
-    if (!name) return;
-    const dose = prompt("Dosage (e.g. 200mg):") || "";
-    const freq = prompt("Frequency (daily/weekly/biweekly):") || "daily";
-    const day = freq !== "daily" ? (prompt("Day of week (e.g. Monday):") || "Monday") : "Daily";
-    const time = prompt("Time (e.g. 08:00):") || "08:00";
-    const type = prompt("Type (pill/injection/topical):") || "pill";
-    const notes = prompt("Notes (effects on training, side effects):") || "";
-    setMeds(p => [...p, { name, dose, freq, day, time, type, notes }]);
-    show("\u2713 Added " + name);
-  }}>+ Add Medication</button>
-</div>
+  onClick={() => { setMedForm({ name: "", dose: "", freq: "daily", day: "Daily", time: "08:00", type: "pill", notes: "" }); setMedModal(true); }}>+ Add Medication</button>
+</Exp>
 
 <div className="card">
 <div className="card-hdr" style={{ cursor: "pointer" }} onClick={() => setBwExpanded(!bwExpanded)}>
@@ -2501,24 +2496,23 @@ onClick={async () => {
 
 <div className="brain" onClick={() => { setCoachOpen(true); if (!coachResp && !coachLoading) { /* just open panel */ } }} style={{ fontSize: 20, fontWeight: 900, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: 1, color: "#0b1120" }}>IQ</div>
 
-<div className="bnav">
+<div className="bnav" style={{ position: "relative" }}>
 {[
 { id: "home", icon: "🏠", label: "Home" },
 { id: "food", icon: "🍽️", label: "Food" },
 { id: "train", icon: "🏋️", label: "Train" },
 { id: "more", icon: "📊", label: "More" },
 ].map(n => (
-<div key={n.id} className={`bnav-item ${tab === n.id ? "on" : ""}`} onClick={() => setTab(n.id)}>
+<div key={n.id} className={`bnav-item ${tab === n.id ? "on" : ""}`} onClick={() => setTab(n.id)} style={{ flex: "0 1 auto", padding: "8px 14px" }}>
 <div className="bnav-icon">{n.icon}</div>
 <div className="bnav-label">{n.label}</div>
 </div>
 ))}
+<div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", paddingRight: 14, paddingLeft: 6 }}>
+<div onClick={() => setTab("ai")} style={{ width: 46, height: 46, borderRadius: "50%", background: tab === "ai" ? "linear-gradient(135deg, #00d4aa, #00b4d8)" : "rgba(0,212,170,0.1)", border: tab === "ai" ? "2px solid #00d4aa" : "2px solid rgba(0,212,170,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 2px 12px rgba(0,212,170,0.25)", transition: "all 0.2s", marginTop: -8 }}>
+<span style={{ fontWeight: 900, fontSize: 15, color: tab === "ai" ? "#0b1120" : S.green, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: 0.5 }}>IQ</span>
 </div>
-
-{/* IQ Coach floating button - like WHOOP */}
-<div style={{ position: "fixed", bottom: "max(76px, calc(60px + env(safe-area-inset-bottom)))", right: "max(calc(50% - 236px), 12px)", width: 54, height: 54, borderRadius: "50%", background: "linear-gradient(135deg, " + S.green + ", " + S.cyan + ")", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 90, boxShadow: "0 4px 20px rgba(0,212,170,0.35)", transition: "all 0.15s" }}
-onClick={() => setTab("ai")}>
-<span style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 900, fontSize: 20, color: "#0b1120", letterSpacing: 1, lineHeight: 1 }}>IQ</span>
+</div>
 </div>
 
 {toast && <div className="toast">{toast}</div>}
@@ -2556,6 +2550,105 @@ else { setGoalCal("2200"); setGoalPro("180"); setGoalCarb("180"); setGoalFat("70
 <div><div className="inp-label">Target Wt (lbs)</div><input className="inp" type="number" value={targetWeight} onChange={e => setTargetWeight(e.target.value)} inputMode="numeric" /></div>
 </div>
 <button className="btn btn-g" onClick={() => { show("✓ Goals saved"); setGoalModal(false); }}>Save Goals</button>
+</div>
+</div>
+)}
+
+{/* ── Medication Add Modal ── */}
+{medModal && (
+<div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) setMedModal(false); }}>
+<div className="modal">
+<div className="modal-bar" />
+<div className="modal-title">💊 Add Medication</div>
+
+<div className="inp-label">Medication Name</div>
+<input className="inp" style={{ textAlign: "left", fontSize: 16, marginBottom: 10 }} placeholder="e.g. Testosterone Cypionate" value={medForm.name} onChange={e => setMedForm(p => ({...p, name: e.target.value}))} />
+
+<div className="inp-label">Dosage</div>
+<input className="inp" style={{ textAlign: "left", fontSize: 16, marginBottom: 10 }} placeholder="e.g. 200mg" value={medForm.dose} onChange={e => setMedForm(p => ({...p, dose: e.target.value}))} />
+
+<div className="inp-label">Type</div>
+<div className="tog" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+{["pill", "injection", "topical", "inhaler", "other"].map(t => (
+<div key={t} className={`tog-btn ${medForm.type === t ? "on" : ""}`} style={{ flex: "1 1 30%", textAlign: "center", padding: "8px 6px" }}
+onClick={() => setMedForm(p => ({...p, type: t}))}>{t === "pill" ? "💊" : t === "injection" ? "💉" : t === "topical" ? "🧴" : t === "inhaler" ? "🫁" : "📦"} {t}</div>
+))}
+</div>
+
+<div className="inp-label">Frequency</div>
+<div className="tog" style={{ marginBottom: 12 }}>
+{["daily", "weekly", "biweekly", "monthly"].map(f => (
+<div key={f} className={`tog-btn ${medForm.freq === f ? "on" : ""}`} style={{ flex: 1, textAlign: "center" }}
+onClick={() => setMedForm(p => ({...p, freq: f, day: f === "daily" ? "Daily" : p.day === "Daily" ? "Monday" : p.day}))}>{f}</div>
+))}
+</div>
+
+{medForm.freq !== "daily" && (
+<>
+<div className="inp-label">Day of Week</div>
+<div className="tog" style={{ marginBottom: 12, flexWrap: "wrap" }}>
+{["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(d => (
+<div key={d} className={`tog-btn ${medForm.day === d ? "on" : ""}`} style={{ flex: "1 1 30%", textAlign: "center", padding: "8px 4px", fontSize: 13 }}
+onClick={() => setMedForm(p => ({...p, day: d}))}>{d.slice(0, 3)}</div>
+))}
+</div>
+</>
+)}
+
+<div className="sg" style={{ marginBottom: 12 }}>
+<div><div className="inp-label">Time</div><input className="inp" type="time" value={medForm.time} onChange={e => setMedForm(p => ({...p, time: e.target.value}))} style={{ fontSize: 16 }} /></div>
+</div>
+
+<div className="inp-label">Notes (optional)</div>
+<input className="inp" style={{ textAlign: "left", fontSize: 16, marginBottom: 14 }} placeholder="Effects on training, side effects..." value={medForm.notes} onChange={e => setMedForm(p => ({...p, notes: e.target.value}))} />
+
+<button className="btn btn-g" onClick={() => {
+if (!medForm.name) { show("Enter medication name"); return; }
+setMeds(p => [...p, {...medForm}]);
+show("✓ Added " + medForm.name);
+setMedModal(false);
+}}>Save Medication</button>
+</div>
+</div>
+)}
+
+{/* ── Account Settings Modal ── */}
+{accountModal && (
+<div className="overlay" onClick={(e) => { if (e.target === e.currentTarget) setAccountModal(false); }}>
+<div className="modal">
+<div className="modal-bar" />
+<div className="modal-title">👤 Account Settings</div>
+
+<div className="inp-label">Display Name</div>
+<input className="inp" style={{ textAlign: "left", fontSize: 16, marginBottom: 10 }} value={userProfile.name || user?.user_metadata?.display_name || ""} onChange={e => setUserProfile(p => ({...p, name: e.target.value}))} />
+
+<div className="inp-label">Email</div>
+<div style={{ padding: "12px 16px", background: "rgba(255,255,255,0.03)", border: "1px solid " + S.border, borderRadius: 14, color: S.t2, fontSize: 15, marginBottom: 10 }}>{user?.email || "—"}</div>
+
+<div className="sg" style={{ marginBottom: 12 }}>
+<div><div className="inp-label">Age</div><input className="inp" type="number" inputMode="numeric" value={userProfile.age || ""} onChange={e => setUserProfile(p => ({...p, age: e.target.value}))} /></div>
+<div><div className="inp-label">Sex</div>
+<div className="tog">
+{["male", "female"].map(s => (
+<div key={s} className={`tog-btn ${userProfile.sex === s ? "on" : ""}`} style={{ flex: 1, textAlign: "center" }}
+onClick={() => setUserProfile(p => ({...p, sex: s}))}>{s === "male" ? "♂ Male" : "♀ Female"}</div>
+))}
+</div>
+</div>
+</div>
+
+<div className="sg" style={{ marginBottom: 12 }}>
+<div><div className="inp-label">Height (in)</div><input className="inp" type="number" inputMode="numeric" value={userProfile.height || ""} onChange={e => setUserProfile(p => ({...p, height: e.target.value}))} /></div>
+<div><div className="inp-label">Start Weight</div><input className="inp" type="number" inputMode="numeric" value={userProfile.startWeight || "280"} onChange={e => setUserProfile(p => ({...p, startWeight: e.target.value}))} /></div>
+</div>
+
+<div className="inp-label">Health Conditions</div>
+<input className="inp" style={{ textAlign: "left", fontSize: 14, marginBottom: 14 }} placeholder="e.g. sleep apnea, hypertension" value={(userProfile.conditions || []).join(", ")} onChange={e => setUserProfile(p => ({...p, conditions: e.target.value.split(",").map(c => c.trim()).filter(Boolean)}))} />
+
+<button className="btn btn-g" onClick={() => { show("✓ Profile saved"); setAccountModal(false); }}>Save Profile</button>
+
+<button className="btn" style={{ marginTop: 10, background: "rgba(239,68,68,0.08)", color: S.red, border: "1.5px solid rgba(239,68,68,0.25)" }}
+onClick={async () => { await sb.auth.signOut(); }}>Sign Out</button>
 </div>
 </div>
 )}
