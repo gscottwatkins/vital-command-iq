@@ -19,16 +19,106 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
+
+// ── Supabase Client ──
+const SUPABASE_URL = "https://agmypeqmmclhechnnrlv.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnbXlwZXFtbWNsaGVjaG5ucmlsdiIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzcyNTgwMTYwLCJleHAiOjIwODgxNTYxNjB9.zyi6oOjHBsepmYDjB4mnlbJAmHD25E1dcX6NvNRzDzM";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 
 /*
 ═══════════════════════════════════════════════════════════════════
-VITALCOMMAND IQ v2 — Mobile-Optimized Health Intelligence
-Fixes: larger cards, multi-photo upload, AI auto-save, faster entry
+VITALCOMMAND IQ v3 — Cloud-Synced Health Intelligence
+Supabase Auth + Cloud Storage — works across all devices
 ═══════════════════════════════════════════════════════════════════
 */
+
+// ── Auth Screen ──
+function AuthScreen({ onAuth }) {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
+  const handleSubmit = async () => {
+    if (!email || !pass) { setErr("Email and password required"); return; }
+    setLoading(true); setErr("");
+    try {
+      if (mode === "signup") {
+        const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { display_name: name || email.split("@")[0] } } });
+        if (error) throw error;
+        if (data.user) onAuth(data.user);
+      } else {
+        const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+        if (error) throw error;
+        if (data.user) onAuth(data.user);
+      }
+    } catch(e) { setErr(e.message || "Authentication failed"); }
+    setLoading(false);
+  };
+
+  const S = { bg: "#0b1120", card: "#0f172a", green: "#00d4aa", cyan: "#06b6d4", purple: "#a855f7", t1: "#e2e8f0", t2: "#94a3b8", t3: "#64748b", border: "rgba(255,255,255,0.06)" };
+
+  return React.createElement("div", { style: { minHeight: "100dvh", background: S.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: "'Plus Jakarta Sans', -apple-system, sans-serif" } },
+    React.createElement("div", { style: { width: "100%", maxWidth: 400 } },
+      // Logo
+      React.createElement("div", { style: { textAlign: "center", marginBottom: 40 } },
+        React.createElement("div", { style: { fontSize: 28, fontWeight: 900, color: S.t1, letterSpacing: -0.5 } },
+          React.createElement("span", { style: { color: S.green } }, "Vital"),
+          React.createElement("span", null, "Command"),
+          React.createElement("span", { style: { color: S.cyan, marginLeft: 4 } }, "IQ")
+        ),
+        React.createElement("div", { style: { fontSize: 13, color: S.t3, marginTop: 8 } }, "Personal Health Intelligence")
+      ),
+      // Card
+      React.createElement("div", { style: { background: S.card, borderRadius: 20, padding: 28, border: `1px solid ${S.border}` } },
+        React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: S.t1, marginBottom: 20 } }, mode === "login" ? "Welcome back" : "Create account"),
+        // Name field (signup only)
+        mode === "signup" && React.createElement("input", { type: "text", placeholder: "Your name", value: name, onChange: e => setName(e.target.value), style: { width: "100%", height: 48, background: "rgba(255,255,255,0.04)", border: `1.5px solid ${S.border}`, borderRadius: 12, padding: "0 14px", color: S.t1, fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 10, boxSizing: "border-box" } }),
+        React.createElement("input", { type: "email", placeholder: "Email", value: email, onChange: e => setEmail(e.target.value), style: { width: "100%", height: 48, background: "rgba(255,255,255,0.04)", border: `1.5px solid ${S.border}`, borderRadius: 12, padding: "0 14px", color: S.t1, fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 10, boxSizing: "border-box" } }),
+        React.createElement("input", { type: "password", placeholder: "Password", value: pass, onChange: e => setPass(e.target.value), onKeyDown: e => { if (e.key === "Enter") handleSubmit(); }, style: { width: "100%", height: 48, background: "rgba(255,255,255,0.04)", border: `1.5px solid ${S.border}`, borderRadius: 12, padding: "0 14px", color: S.t1, fontSize: 15, fontFamily: "inherit", outline: "none", marginBottom: 16, boxSizing: "border-box" } }),
+        err && React.createElement("div", { style: { color: "#ef4444", fontSize: 13, marginBottom: 12, fontWeight: 600 } }, err),
+        React.createElement("button", { onClick: handleSubmit, disabled: loading, style: { width: "100%", height: 52, background: `linear-gradient(135deg, ${S.green}, ${S.cyan})`, border: "none", borderRadius: 14, color: "#0b1120", fontSize: 16, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", opacity: loading ? 0.6 : 1 } }, loading ? "..." : mode === "login" ? "Sign In" : "Create Account"),
+        React.createElement("div", { style: { textAlign: "center", marginTop: 16, fontSize: 14, color: S.t3 } },
+          mode === "login" ? "Don't have an account? " : "Already have an account? ",
+          React.createElement("span", { onClick: () => { setMode(mode === "login" ? "signup" : "login"); setErr(""); }, style: { color: S.green, fontWeight: 700, cursor: "pointer" } }, mode === "login" ? "Sign up" : "Sign in")
+        )
+      )
+    )
+  );
+}
+
+// ── Root App Wrapper with Auth ──
+function RootApp() {
+  const [user, setUser] = useState(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    // Check existing session
+    sb.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+      setChecking(false);
+    });
+    // Listen for auth changes
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (checking) return React.createElement("div", { style: { minHeight: "100dvh", background: "#0b1120", display: "flex", alignItems: "center", justifyContent: "center" } },
+    React.createElement("div", { style: { color: "#00d4aa", fontSize: 20, fontWeight: 800, fontFamily: "'Plus Jakarta Sans', sans-serif" } }, "Loading...")
+  );
+
+  if (!user) return React.createElement(AuthScreen, { onAuth: setUser });
+
+  return React.createElement(App, { user });
+}
 
 // ── Food Database ──
 const FOODS = {
@@ -248,7 +338,7 @@ style={{ transition: "stroke-dashoffset 0.5s ease" }} />
 );
 };
 
-function App() {
+function App({ user }) {
 const [tab, setTab] = useState("home");
 const [toast, setToast] = useState(null);
 const [modal, setModal] = useState(null);
@@ -368,53 +458,85 @@ temp: Math.round(d.hourly.temperature_2m[i]), code: d.hourly.weather_code[i],
 });
 }, []);
 
-// ── Persistent Storage — Load on mount ──
+// ── Persistent Storage — Load from Supabase on mount ──
 useEffect(() => {
 const loadAll = async () => {
 try {
-let d = null;
-// Try localStorage first (works on deployed site)
-const lsData = localStorage.getItem("vciq-data");
-if (lsData) { d = JSON.parse(lsData); }
-// Fallback: try window.storage (Claude artifacts)
-if (!d && window.storage) {
-  try {
-    const r = await window.storage.get("vciq-data");
-    if (r && r.value) d = JSON.parse(r.value);
-  } catch(e) {}
+const today = new Date().toISOString().split("T")[0];
+
+// Load profile
+const { data: profile } = await sb.from("profiles").select("*").eq("id", user.id).single();
+if (profile) {
+  if (profile.fitness_goal) setFitnessGoal(profile.fitness_goal);
+  if (profile.target_weight) setTargetWeight(String(profile.target_weight));
+  if (profile.goal_cal) setGoalCal(String(profile.goal_cal));
+  if (profile.goal_pro) setGoalPro(String(profile.goal_pro));
+  if (profile.goal_carb) setGoalCarb(String(profile.goal_carb));
+  if (profile.goal_fat) setGoalFat(String(profile.goal_fat));
+  if (profile.sex || profile.age || profile.height || profile.conditions) {
+    setUserProfile({ sex: profile.sex || "male", age: String(profile.age || 58), height: profile.height || '5\'10"', conditions: profile.conditions || [] });
+  }
 }
-if (d) {
-if (d.wt) setWt(d.wt); if (d.bf) setBf(d.bf);
-if (d.mm) setMm(d.mm); if (d.vf) setVf(d.vf);
-if (d.rec) setRec(d.rec); if (d.hrv) setHrv(d.hrv);
-if (d.slp) setSlp(d.slp); if (d.strain) setStrain(d.strain);
-if (d.ahi) setAhi(d.ahi); if (d.cpH) setCpH(d.cpH); if (d.cpM) setCpM(d.cpM);
-if (d.bp) setBp(d.bp);
-if (d.foods) setFoods(d.foods);
-if (d.workouts) setWkts(d.workouts);
-if (d.woSets) setWoSets(d.woSets);
-if (d.goalCal) setGoalCal(d.goalCal);
-if (d.goalPro) setGoalPro(d.goalPro);
-if (d.goalCarb) setGoalCarb(d.goalCarb);
-if (d.goalFat) setGoalFat(d.goalFat);
-if (d.fitnessGoal) setFitnessGoal(d.fitnessGoal);
-if (d.rhr) setRhr(d.rhr); if (d.spo2) setSpo2(d.spo2);
-if (d.avgHr) setAvgHr(d.avgHr); if (d.maxHr) setMaxHr(d.maxHr);
-if (d.sleepHours) setSleepHours(d.sleepHours);
-if (d.caloriesBurned) setCaloriesBurned(d.caloriesBurned);
-if (d.steps) setSteps(d.steps);
-if (d.physioAge) setPhysioAge(d.physioAge);
-if (d.targetWeight) setTargetWeight(d.targetWeight);
-if (d.meds) setMeds(d.meds);
-if (d.userProfile) setUserProfile(d.userProfile);
-if (d.bloodwork) setBW(d.bloodwork);
-setWhoopStatus("saved"); setWithingsStatus("saved");
+
+// Load today's snapshot
+const { data: snap } = await sb.from("daily_snapshots").select("*").eq("user_id", user.id).eq("date", today).single();
+if (snap) {
+  if (snap.weight) setWt(String(snap.weight));
+  if (snap.body_fat) setBf(String(snap.body_fat));
+  if (snap.muscle_mass) setMm(String(snap.muscle_mass));
+  if (snap.visceral_fat) setVf(String(snap.visceral_fat));
+  if (snap.recovery) setRec(String(snap.recovery));
+  if (snap.hrv) setHrv(String(snap.hrv));
+  if (snap.sleep_hours) { setSlp(String(snap.sleep_hours)); setSleepHours(String(snap.sleep_hours)); }
+  if (snap.strain) setStrain(String(snap.strain));
+  if (snap.ahi) setAhi(String(snap.ahi));
+  if (snap.cpap_hours) setCpH(String(snap.cpap_hours));
+  if (snap.cpap_mask) setCpM(String(snap.cpap_mask));
+  if (snap.rhr) setRhr(String(snap.rhr));
+  if (snap.spo2) setSpo2(String(snap.spo2));
+  if (snap.avg_hr) setAvgHr(String(snap.avg_hr));
+  if (snap.max_hr) setMaxHr(String(snap.max_hr));
+  if (snap.calories_burned) setCaloriesBurned(String(snap.calories_burned));
+  if (snap.steps) setSteps(String(snap.steps));
+  if (snap.physio_age) setPhysioAge(String(snap.physio_age));
+  setWhoopStatus("saved"); setWithingsStatus("saved");
 }
-} catch(e) { console.log("Storage load:", e); }
+
+// Load today's food
+const { data: foodData } = await sb.from("food_logs").select("*").eq("user_id", user.id).eq("date", today).order("logged_at", { ascending: true });
+if (foodData && foodData.length > 0) {
+  setFoods(foodData.map(f => ({ n: f.name, c: f.calories, p: f.protein, cb: f.carbs, f: f.fat, i: f.icon || "\uD83C\uDF7D\uFE0F", time: f.meal_time || "", _id: f.id })));
+}
+
+// Load today's workouts
+const { data: woData } = await sb.from("workout_logs").select("*").eq("user_id", user.id).eq("date", today).order("logged_at", { ascending: true });
+if (woData && woData.length > 0) {
+  setWkts(woData.map(w => ({ name: w.name, mins: w.minutes, cal: w.calories, type: w.type, sets: w.sets || [], _id: w.id })));
+}
+
+// Load today's BP
+const { data: bpData } = await sb.from("bp_logs").select("*").eq("user_id", user.id).eq("date", today).order("logged_at", { ascending: true });
+if (bpData && bpData.length > 0) {
+  setBp(bpData.map(b => ({ s: b.systolic, d: b.diastolic, p: b.pulse, per: b.period, _id: b.id })));
+}
+
+// Load medications
+const { data: medData } = await sb.from("medications").select("*").eq("user_id", user.id).eq("active", true);
+if (medData && medData.length > 0) {
+  setMeds(medData.map(m => ({ name: m.name, dose: m.dose, freq: m.frequency, day: m.day_of_week, time: m.time_of_day, type: m.type, notes: m.notes, _id: m.id })));
+}
+
+// Load bloodwork
+const { data: bwData } = await sb.from("bloodwork").select("*").eq("user_id", user.id).order("test_date", { ascending: false }).limit(5);
+if (bwData && bwData.length > 0) {
+  setBW(bwData.map(b => ({ date: b.test_date, markers: b.markers, _id: b.id })));
+}
+
+} catch(e) { console.log("Supabase load:", e); }
 setStorageReady(true);
 };
 loadAll();
-}, []);
+}, [user]);
 
 // ── Sync function (reusable for auto + manual) ──
 const syncData = useCallback(async (showToast = false) => {
@@ -486,29 +608,106 @@ clearInterval(interval);
 }, [storageReady, syncData]);
 
 
-// ── Persistent Storage — Auto-save on data change ──
+// ── Persistent Storage — Auto-save to Supabase on data change ──
 const saveTimer = useRef(null);
 useEffect(() => {
-if (!storageReady) return;
+if (!storageReady || !user) return;
 if (saveTimer.current) clearTimeout(saveTimer.current);
 saveTimer.current = setTimeout(async () => {
 try {
-const savePayload = JSON.stringify({
-wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM,
-bp, foods, workouts, savedAt: new Date().toISOString(),
-goalCal, goalPro, goalCarb, goalFat, fitnessGoal,
-rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned,
-steps, physioAge, targetWeight,
-meds, userProfile, bloodwork,
+const today = new Date().toISOString().split("T")[0];
+
+// Upsert daily snapshot
+await sb.from("daily_snapshots").upsert({
+  user_id: user.id, date: today,
+  weight: parseFloat(wt) || null, body_fat: parseFloat(bf) || null,
+  muscle_mass: parseFloat(mm) || null, visceral_fat: parseFloat(vf) || null,
+  recovery: parseFloat(rec) || null, hrv: parseFloat(hrv) || null,
+  rhr: parseFloat(rhr) || null, spo2: parseFloat(spo2) || null,
+  sleep_hours: parseFloat(slp) || parseFloat(sleepHours) || null,
+  strain: parseFloat(strain) || null,
+  avg_hr: parseFloat(avgHr) || null, max_hr: parseFloat(maxHr) || null,
+  calories_burned: parseFloat(caloriesBurned) || null,
+  ahi: parseFloat(ahi) || null, cpap_hours: parseFloat(cpH) || null, cpap_mask: parseFloat(cpM) || null,
+  steps: parseInt(steps) || null, physio_age: parseFloat(physioAge) || null,
+  updated_at: new Date().toISOString(),
+}, { onConflict: "user_id,date" });
+
+// Update profile
+await sb.from("profiles").upsert({
+  id: user.id,
+  fitness_goal: fitnessGoal, target_weight: parseFloat(targetWeight) || 199,
+  goal_cal: parseInt(goalCal), goal_pro: parseInt(goalPro),
+  goal_carb: parseInt(goalCarb), goal_fat: parseInt(goalFat),
+  sex: userProfile.sex, age: parseInt(userProfile.age),
+  height: userProfile.height, conditions: userProfile.conditions,
+  updated_at: new Date().toISOString(),
 });
-// Save to localStorage (works on deployed site)
-localStorage.setItem("vciq-data", savePayload);
-// Also try window.storage (Claude artifacts)
-if (window.storage) { try { await window.storage.set("vciq-data", savePayload); } catch(e) {} }
-} catch(e) { console.log("Storage save:", e); }
-}, 1500);
+
+} catch(e) { console.log("Supabase save:", e); }
+}, 2000);
 return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-}, [wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM, bp, foods, workouts, storageReady, goalCal, goalPro, goalCarb, goalFat, fitnessGoal, rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned, steps, physioAge, targetWeight, meds, userProfile, bloodwork]);
+}, [wt, bf, mm, vf, rec, hrv, slp, strain, ahi, cpH, cpM, storageReady, goalCal, goalPro, goalCarb, goalFat, fitnessGoal, rhr, spo2, avgHr, maxHr, sleepHours, caloriesBurned, steps, physioAge, targetWeight, userProfile, user]);
+
+// ── Sync foods to Supabase ──
+const foodSaveTimer = useRef(null);
+useEffect(() => {
+if (!storageReady || !user) return;
+if (foodSaveTimer.current) clearTimeout(foodSaveTimer.current);
+foodSaveTimer.current = setTimeout(async () => {
+  const today = new Date().toISOString().split("T")[0];
+  try {
+    // Delete today's food logs and re-insert (simpler than diff)
+    await sb.from("food_logs").delete().eq("user_id", user.id).eq("date", today);
+    if (foods.length > 0) {
+      await sb.from("food_logs").insert(foods.map(f => ({
+        user_id: user.id, date: today, name: f.n, calories: f.c, protein: f.p,
+        carbs: f.cb, fat: f.f, icon: f.i, meal_time: f.time || f.t || "",
+      })));
+    }
+  } catch(e) { console.log("Food sync:", e); }
+}, 2000);
+return () => { if (foodSaveTimer.current) clearTimeout(foodSaveTimer.current); };
+}, [foods, storageReady, user]);
+
+// ── Sync workouts to Supabase ──
+const woSaveTimer = useRef(null);
+useEffect(() => {
+if (!storageReady || !user) return;
+if (woSaveTimer.current) clearTimeout(woSaveTimer.current);
+woSaveTimer.current = setTimeout(async () => {
+  const today = new Date().toISOString().split("T")[0];
+  try {
+    await sb.from("workout_logs").delete().eq("user_id", user.id).eq("date", today);
+    if (workouts.length > 0) {
+      await sb.from("workout_logs").insert(workouts.map(w => ({
+        user_id: user.id, date: today, name: w.name, type: w.type,
+        minutes: w.mins, calories: w.cal, sets: w.sets || null,
+      })));
+    }
+  } catch(e) { console.log("Workout sync:", e); }
+}, 2000);
+return () => { if (woSaveTimer.current) clearTimeout(woSaveTimer.current); };
+}, [workouts, storageReady, user]);
+
+// ── Sync BP to Supabase ──
+const bpSaveTimer = useRef(null);
+useEffect(() => {
+if (!storageReady || !user) return;
+if (bpSaveTimer.current) clearTimeout(bpSaveTimer.current);
+bpSaveTimer.current = setTimeout(async () => {
+  const today = new Date().toISOString().split("T")[0];
+  try {
+    await sb.from("bp_logs").delete().eq("user_id", user.id).eq("date", today);
+    if (bp.length > 0) {
+      await sb.from("bp_logs").insert(bp.map(b => ({
+        user_id: user.id, date: today, systolic: b.s, diastolic: b.d, pulse: b.p, period: b.per,
+      })));
+    }
+  } catch(e) { console.log("BP sync:", e); }
+}, 2000);
+return () => { if (bpSaveTimer.current) clearTimeout(bpSaveTimer.current); };
+}, [bp, storageReady, user]);
 
 const wIcon = (c) => c <= 1 ? "☀️" : c <= 3 ? "⛅" : c <= 48 ? "☁️" : c <= 67 ? "🌧️" : c <= 82 ? "🌦️" : "⛈️";
 
@@ -1142,7 +1341,7 @@ return (
 <div className="date">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</div>
 </div>
 <div className="hdr-icon" style={{ background: "linear-gradient(135deg, #00e5c7, #00d4ff)", color: "#0b1120", fontWeight: 900, fontSize: 18, fontFamily: "'Plus Jakarta Sans',sans-serif", letterSpacing: 1 }}>
-SW
+{(user?.user_metadata?.display_name || user?.email || "U").split(" ").map(w => w[0]).join("").toUpperCase().slice(0,2)}
 </div>
 </div>
 </div>
@@ -1164,7 +1363,7 @@ SW
 
 
 
-{greet}, <span style={{ color: S.green }}>Scott</span> 💪
+{greet}, <span style={{ color: S.green }}>{user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Champion"}</span> 💪
 </div>
 {weather && (
 <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12 }}>
@@ -2129,8 +2328,13 @@ show("✓ Today's logs cleared");
 <button className="btn" style={{ background: "rgba(239,68,68,0.05)", color: S.red, border: `1.5px solid rgba(239,68,68,0.15)` }}
 onClick={async () => {
 if (confirm("Reset ALL data including metrics, food log, workouts, and BP?") && confirm("This CANNOT be undone. Are you absolutely sure?")) {
-try { localStorage.removeItem("vciq-data"); } catch(e) {}
-try { await window.storage.delete("vciq-data"); } catch(e) {}
+const today = new Date().toISOString().split("T")[0];
+try {
+  await sb.from("food_logs").delete().eq("user_id", user.id).eq("date", today);
+  await sb.from("workout_logs").delete().eq("user_id", user.id).eq("date", today);
+  await sb.from("bp_logs").delete().eq("user_id", user.id).eq("date", today);
+  await sb.from("daily_snapshots").delete().eq("user_id", user.id).eq("date", today);
+} catch(e) { console.log("Reset error:", e); }
 setFoods([]); setWkts([]); setBp([]);
 setWt("213.8"); setBf("39.4"); setMm("165.8"); setVf("8");
 setRec("75"); setHrv("25"); setSlp(""); setStrain("");
@@ -2138,6 +2342,18 @@ setAhi(""); setCpH(""); setCpM("");
 show("✓ All data reset");
 }
 }}>Reset All Data</button>
+</div>
+
+<div className="card" style={{ borderLeft: `3px solid ${S.cyan}` }}>
+<div className="card-title" style={{ marginBottom: 10 }}>{"\uD83D\uDD12"} Account</div>
+<div style={{ fontSize: 13, color: S.t2, marginBottom: 12 }}>
+Signed in as <span style={{ color: S.t1, fontWeight: 700 }}>{user?.email}</span>
+</div>
+<div style={{ fontSize: 12, color: S.t3, marginBottom: 12 }}>
+Data syncs to cloud automatically. Access from any device.
+</div>
+<button className="btn" style={{ background: "rgba(6,182,212,0.08)", color: S.cyan, border: `1.5px solid rgba(6,182,212,0.25)` }}
+onClick={async () => { await sb.auth.signOut(); }}>Sign Out</button>
 </div>
 </div>
 )}
@@ -2264,7 +2480,7 @@ else { setGoalCal("2200"); setGoalPro("180"); setGoalCarb("180"); setGoalFat("70
 }
 
 
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(RootApp));
 </script>
 </body>
 </html>
