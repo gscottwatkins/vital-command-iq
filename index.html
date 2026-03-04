@@ -1304,7 +1304,7 @@ else { setGoalCal("2200"); setGoalPro("180"); setGoalCarb("180"); setGoalFat("70
 
 {modal === "ai_workout" && (
 <>
-<div className="modal-title">🤖 AI Workout Recommendation</div>
+<div className="modal-title">🧠 IQ Workout Recommendation</div>
 <div className="inp-label">What's your focus today?</div>
 <div className="tog" style={{ marginBottom: 14, flexWrap: "wrap" }}>
 {[
@@ -1662,10 +1662,10 @@ show(`✓ ${qty}× ${item.n}`);
 {tab === "train" && (
 <div className="content" style={{ paddingTop: 14 }}>
 
-{/* AI Workout Recommendation */}
+{/* IQ Workout Recommendation */}
 <button className="btn btn-p" style={{ width: "100%", marginBottom: 14, height: 52, fontSize: 15 }}
 onClick={() => setModal("ai_workout")}>
-🤖 AI Workout Recommendation
+🧠 IQ Workout Recommendation
 </button>
 
 {/* Workout Summary Stats */}
@@ -1705,7 +1705,7 @@ onClick={() => setModal("ai_workout")}>
 </div>
 )}
 
-{/* AI Workout Recap Button */}
+{/* IQ Workout Recap Button */}
 {workouts.length > 0 && (
 <button className="btn btn-g" style={{ width: "100%", marginBottom: 14, height: 52, fontSize: 15 }}
 onClick={async () => {
@@ -1741,7 +1741,7 @@ setWktSummary(txt);
 } catch(e) { setWktSummary("AI recap unavailable. Upload WHOOP/Garmin screenshots for manual analysis."); }
 setWktSummaryLoading(false);
 }}>
-{wktSummaryLoading ? "\u2728 Generating Recap..." : "\u2728 AI Workout Recap"}
+{wktSummaryLoading ? "\u2728 Generating Recap..." : "\u2728 IQ Workout Recap"}
 </button>
 )}
 
